@@ -146,7 +146,8 @@ A: 這是正常的！`config.html` 只是設定工具，實際動畫在**產生�
 
 ## 問題回報
 
-如有問題或建議，請加入 Discord 群組：https://discord.gg/nJt6UuBXrT（星月教徒摸爬打滾）回報
+如有問題或建議，請加入 Discord 群組：https://discord.gg/nJt6UuBXrT
+（星月教徒摸爬打滾）回報
 
 ---
 
