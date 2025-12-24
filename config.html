@@ -43,6 +43,12 @@
     <div class="container">
         <h1>🎨 圖片動畫設定工具</h1>
 
+        <!-- 操作按鈕 -->
+        <div class="buttons">
+            <button class="btn btn-secondary" onclick="importAnimation()">匯入動畫檔案</button>
+            <button class="btn btn-secondary" onclick="resetSettings()">重置設定</button>
+        </div>
+
         <!-- 基礎設定 -->
         <div class="section">
             <h2>基礎設定</h2>
@@ -62,10 +68,11 @@
             <h2>快速範本</h2>
             <div class="content">
                 <button class="template-btn" onclick="loadTemplate('pet')">桌面寵物</button>
+                <button class="template-btn" onclick="loadTemplate('subscribe')">訂閱特效</button>
+                <button class="template-btn" onclick="loadTemplate('energyBall')">能量球</button>
                 <button class="template-btn" onclick="loadTemplate('float')">飄浮效果</button>
-                <button class="template-btn" onclick="loadTemplate('neon')">霓虹燈</button>
-                <button class="template-btn" onclick="loadTemplate('roll')">翻滾動畫</button>
                 <button class="template-btn" onclick="loadTemplate('randomPop')">隨機出現</button>
+                <button class="template-btn" onclick="loadTemplate('padoru')">Padoru</button>
             </div>
         </div>
 
@@ -104,6 +111,16 @@
                         <label><input type="radio" name="horizontalPosition" value="top"> 頂部</label>
                         <label><input type="radio" name="horizontalPosition" value="middle" checked> 中間</label>
                         <label><input type="radio" name="horizontalPosition" value="bottom"> 底部</label>
+                        <label><input type="radio" name="horizontalPosition" value="random"> 隨機</label>
+                    </div>
+                </div>
+                <div class="form-group" id="horizontalLoopPosGroup" style="display: none;">
+                    <label>垂直位置</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="horizontalLoopPosition" value="top"> 頂部</label>
+                        <label><input type="radio" name="horizontalLoopPosition" value="middle" checked> 中間</label>
+                        <label><input type="radio" name="horizontalLoopPosition" value="bottom"> 底部</label>
+                        <label><input type="radio" name="horizontalLoopPosition" value="random"> 隨機</label>
                     </div>
                 </div>
                 <div class="form-group" id="horizontalLoopStartGroup" style="display: none;">
@@ -119,6 +136,16 @@
                         <label><input type="radio" name="verticalPosition" value="left"> 左側</label>
                         <label><input type="radio" name="verticalPosition" value="center" checked> 中間</label>
                         <label><input type="radio" name="verticalPosition" value="right"> 右側</label>
+                        <label><input type="radio" name="verticalPosition" value="random"> 隨機</label>
+                    </div>
+                </div>
+                <div class="form-group" id="verticalLoopPosGroup" style="display: none;">
+                    <label>水平位置</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="verticalLoopPosition" value="left"> 左側</label>
+                        <label><input type="radio" name="verticalLoopPosition" value="center" checked> 中間</label>
+                        <label><input type="radio" name="verticalLoopPosition" value="right"> 右側</label>
+                        <label><input type="radio" name="verticalLoopPosition" value="random"> 隨機</label>
                     </div>
                 </div>
                 <div class="form-group" id="verticalLoopStartGroup" style="display: none;">
@@ -386,11 +413,11 @@
             </div>
         </div>
 
-        <!-- 按鈕 -->
-        <div class="buttons">
-            <button class="btn btn-secondary" onclick="resetSettings()">重置設定</button>
+        <!-- 產生檔案 -->
+        <div class="buttons" style="margin-top: 30px;">
             <button class="btn btn-primary" onclick="generateOutput()">產生動畫檔案</button>
         </div>
+
     </div>
 
     <script>
@@ -422,8 +449,9 @@
         // 移動模式選擇顯示對應位置設定
         const moveMode = document.getElementById('moveMode');
         const horizontalPosGroup = document.getElementById('horizontalPosGroup');
+        const horizontalLoopPosGroup = document.getElementById('horizontalLoopPosGroup');
         const verticalPosGroup = document.getElementById('verticalPosGroup');
-
+        const verticalLoopPosGroup = document.getElementById('verticalLoopPosGroup');
         const horizontalLoopStartGroup = document.getElementById('horizontalLoopStartGroup');
         const verticalLoopStartGroup = document.getElementById('verticalLoopStartGroup');
         const circleRadiusGroup = document.getElementById('circleRadiusGroup');
@@ -437,8 +465,10 @@
             const verticalModes = ['topToBottom', 'bottomToTop'];
             const stayModes = ['randomAppear', 'horizontalLoop', 'verticalLoop'];
 
-            horizontalPosGroup.style.display = (horizontalModes.includes(mode) || mode === 'horizontalLoop') ? 'block' : 'none';
-            verticalPosGroup.style.display = (verticalModes.includes(mode) || mode === 'verticalLoop') ? 'block' : 'none';
+            horizontalPosGroup.style.display = horizontalModes.includes(mode) ? 'block' : 'none';
+            horizontalLoopPosGroup.style.display = mode === 'horizontalLoop' ? 'block' : 'none';
+            verticalPosGroup.style.display = verticalModes.includes(mode) ? 'block' : 'none';
+            verticalLoopPosGroup.style.display = mode === 'verticalLoop' ? 'block' : 'none';
             horizontalLoopStartGroup.style.display = mode === 'horizontalLoop' ? 'block' : 'none';
             verticalLoopStartGroup.style.display = mode === 'verticalLoop' ? 'block' : 'none';
             circleRadiusGroup.style.display = mode === 'circle' ? 'block' : 'none';
@@ -504,8 +534,10 @@
                     speed: parseInt(document.getElementById('speed').value),
                     stayDuration: parseFloat(document.getElementById('stayDuration').value),
                     fade: document.getElementById('fade').checked,
-                    horizontalPosition: document.querySelector('input[name="horizontalPosition"]:checked').value,
-                    verticalPosition: document.querySelector('input[name="verticalPosition"]:checked').value,
+                    horizontalPosition: document.querySelector('input[name="horizontalPosition"]:checked')?.value || 'middle',
+                    horizontalLoopPosition: document.querySelector('input[name="horizontalLoopPosition"]:checked')?.value || 'middle',
+                    verticalPosition: document.querySelector('input[name="verticalPosition"]:checked')?.value || 'center',
+                    verticalLoopPosition: document.querySelector('input[name="verticalLoopPosition"]:checked')?.value || 'center',
                     horizontalLoopStart: document.querySelector('input[name="horizontalLoopStart"]:checked')?.value || 'left',
                     verticalLoopStart: document.querySelector('input[name="verticalLoopStart"]:checked')?.value || 'top',
                     circleRadius: parseInt(document.getElementById('circleRadius').value),
@@ -593,6 +625,7 @@
 '    <meta charset="UTF-8">\n' +
 '    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
 '    <title>圖片動畫</title>\n' +
+'    <!-- CONFIG_DATA:' + btoa(encodeURIComponent(configJSON)) + ' -->\n' +
 '    <style>\n' +
 '        * { margin: 0; padding: 0; box-sizing: border-box; }\n' +
 '        body {\n' +
@@ -711,8 +744,8 @@
 
             case 'leftToRight':
                 movementKeyframes = `@keyframes ${animationName} {
-                    from { left: -10%; }
-                    to { left: 110%; }
+                    from { left: -20%; }
+                    to { left: 120%; }
                 }`;
                 animations.push(`${animationName} ${duration} linear infinite`);
                 img.style.top = horizontalTop.top;
@@ -721,8 +754,8 @@
 
             case 'rightToLeft':
                 movementKeyframes = `@keyframes ${animationName} {
-                    from { left: 110%; }
-                    to { left: -10%; }
+                    from { left: 120%; }
+                    to { left: -20%; }
                 }`;
                 animations.push(`${animationName} ${duration} linear infinite`);
                 img.style.top = horizontalTop.top;
@@ -731,15 +764,27 @@
 
             case 'horizontalLoop':
                 const loopStart = movement.horizontalLoopStart || 'left';
-                const hTransform = horizontalTop.transform;
+                const loopPosMode = movement.horizontalLoopPosition || 'middle';
                 const flipY = config.flip === 'vertical' || config.flip === 'both' ? 'scaleY(-1)' : '';
 
-                // 擴大範圍確保完全離開畫面
                 let startPos = loopStart === 'left' ? -20 : 140;
                 let endPos = loopStart === 'left' ? 140 : -20;
 
-                // 先設定固定的垂直位置
-                img.style.top = horizontalTop.top;
+                function getRandomTop() {
+                    if (loopPosMode === 'random') {
+                        return (Math.random() * 80 + 10) + '%'; // 10% ~ 90%
+                    }
+                    return loopPosMode === 'top' ? '0%' : (loopPosMode === 'middle' ? '50%' : '100%');
+                }
+
+                function getRandomTransform(flip) {
+                    if (loopPosMode === 'random') {
+                        return 'translateY(-50%)';
+                    }
+                    return loopPosMode === 'top' ? 'translateY(0%)' : (loopPosMode === 'middle' ? 'translateY(-50%)' : 'translateY(-100%)');
+                }
+
+                img.style.top = getRandomTop();
                 img.style.left = startPos + '%';
 
                 function horizontalLoopAnimate() {
@@ -747,11 +792,13 @@
                     let currentFlip = 1;
 
                     function moveForward() {
-                        // 使用 CSS transition 而非 animation
+                        const currentTop = getRandomTop();
+                        const currentTransform = getRandomTransform();
+
                         img.style.transition = 'none';
                         img.style.left = startPos + '%';
-                        img.style.top = horizontalTop.top;
-                        img.style.transform = `${hTransform} scaleX(${currentFlip}) ${flipY}`;
+                        img.style.top = currentTop;
+                        img.style.transform = `${currentTransform} scaleX(${currentFlip}) ${flipY}`;
 
                         requestAnimationFrame(() => {
                             requestAnimationFrame(() => {
@@ -761,7 +808,7 @@
                                 setTimeout(() => {
                                     currentFlip = -1;
                                     img.style.transition = 'none';
-                                    img.style.transform = `${hTransform} scaleX(${currentFlip}) ${flipY}`;
+                                    img.style.transform = `${currentTransform} scaleX(${currentFlip}) ${flipY}`;
                                     setTimeout(moveBackward, 50);
                                 }, totalDuration);
                             });
@@ -769,10 +816,13 @@
                     }
 
                     function moveBackward() {
+                        const currentTop = getRandomTop();
+                        const currentTransform = getRandomTransform();
+
                         img.style.transition = 'none';
                         img.style.left = endPos + '%';
-                        img.style.top = horizontalTop.top;
-                        img.style.transform = `${hTransform} scaleX(${currentFlip}) ${flipY}`;
+                        img.style.top = currentTop;
+                        img.style.transform = `${currentTransform} scaleX(${currentFlip}) ${flipY}`;
 
                         requestAnimationFrame(() => {
                             requestAnimationFrame(() => {
@@ -782,7 +832,7 @@
                                 setTimeout(() => {
                                     currentFlip = 1;
                                     img.style.transition = 'none';
-                                    img.style.transform = `${hTransform} scaleX(${currentFlip}) ${flipY}`;
+                                    img.style.transform = `${currentTransform} scaleX(${currentFlip}) ${flipY}`;
                                     setTimeout(moveForward, 50);
                                 }, totalDuration);
                             });
@@ -797,8 +847,8 @@
 
             case 'topToBottom':
                 movementKeyframes = `@keyframes ${animationName} {
-                    from { top: -10%; }
-                    to { top: 110%; }
+                    from { top: -20%; }
+                    to { top: 120%; }
                 }`;
                 animations.push(`${animationName} ${duration} linear infinite`);
                 img.style.left = verticalLeft.left;
@@ -807,8 +857,8 @@
 
             case 'bottomToTop':
                 movementKeyframes = `@keyframes ${animationName} {
-                    from { top: 110%; }
-                    to { top: -10%; }
+                    from { top: 120%; }
+                    to { top: -20%; }
                 }`;
                 animations.push(`${animationName} ${duration} linear infinite`);
                 img.style.left = verticalLeft.left;
@@ -817,15 +867,27 @@
 
             case 'verticalLoop':
                 const vLoopStart = movement.verticalLoopStart || 'top';
-                const vTransform = verticalLeft.transform;
+                const vLoopPosMode = movement.verticalLoopPosition || 'center';
                 const flipX = config.flip === 'horizontal' || config.flip === 'both' ? 'scaleX(-1)' : '';
 
-                // 擴大範圍確保完全離開畫面
                 let vStartPos = vLoopStart === 'top' ? -20 : 140;
                 let vEndPos = vLoopStart === 'top' ? 140 : -20;
 
-                // 先設定固定的水平位置
-                img.style.left = verticalLeft.left;
+                function getRandomLeft() {
+                    if (vLoopPosMode === 'random') {
+                        return (Math.random() * 80 + 10) + '%'; // 10% ~ 90%
+                    }
+                    return vLoopPosMode === 'left' ? '0%' : (vLoopPosMode === 'center' ? '50%' : '100%');
+                }
+
+                function getRandomVTransform() {
+                    if (vLoopPosMode === 'random') {
+                        return 'translateX(-50%)';
+                    }
+                    return vLoopPosMode === 'left' ? 'translateX(0%)' : (vLoopPosMode === 'center' ? 'translateX(-50%)' : 'translateX(-100%)');
+                }
+
+                img.style.left = getRandomLeft();
                 img.style.top = vStartPos + '%';
 
                 function verticalLoopAnimate() {
@@ -833,10 +895,13 @@
                     let currentFlipV = 1;
 
                     function moveDown() {
+                        const currentLeft = getRandomLeft();
+                        const currentTransform = getRandomVTransform();
+
                         img.style.transition = 'none';
                         img.style.top = vStartPos + '%';
-                        img.style.left = verticalLeft.left;
-                        img.style.transform = `${vTransform} scaleY(${currentFlipV}) ${flipX}`;
+                        img.style.left = currentLeft;
+                        img.style.transform = `${currentTransform} scaleY(${currentFlipV}) ${flipX}`;
 
                         requestAnimationFrame(() => {
                             requestAnimationFrame(() => {
@@ -846,7 +911,7 @@
                                 setTimeout(() => {
                                     currentFlipV = -1;
                                     img.style.transition = 'none';
-                                    img.style.transform = `${vTransform} scaleY(${currentFlipV}) ${flipX}`;
+                                    img.style.transform = `${currentTransform} scaleY(${currentFlipV}) ${flipX}`;
                                     setTimeout(moveUp, 50);
                                 }, totalDuration);
                             });
@@ -854,10 +919,13 @@
                     }
 
                     function moveUp() {
+                        const currentLeft = getRandomLeft();
+                        const currentTransform = getRandomVTransform();
+
                         img.style.transition = 'none';
                         img.style.top = vEndPos + '%';
-                        img.style.left = verticalLeft.left;
-                        img.style.transform = `${vTransform} scaleY(${currentFlipV}) ${flipX}`;
+                        img.style.left = currentLeft;
+                        img.style.transform = `${currentTransform} scaleY(${currentFlipV}) ${flipX}`;
 
                         requestAnimationFrame(() => {
                             requestAnimationFrame(() => {
@@ -867,7 +935,7 @@
                                 setTimeout(() => {
                                     currentFlipV = 1;
                                     img.style.transition = 'none';
-                                    img.style.transform = `${vTransform} scaleY(${currentFlipV}) ${flipX}`;
+                                    img.style.transform = `${currentTransform} scaleY(${currentFlipV}) ${flipX}`;
                                     setTimeout(moveDown, 50);
                                 }, totalDuration);
                             });
@@ -882,32 +950,32 @@
 
             case 'diagonalTLBR':
                 movementKeyframes = `@keyframes ${animationName} {
-                    from { left: -10%; top: -10%; }
-                    to { left: 110%; top: 110%; }
+                    from { left: -20%; top: -20%; }
+                    to { left: 120%; top: 120%; }
                 }`;
                 animations.push(`${animationName} ${duration} linear infinite`);
                 break;
 
             case 'diagonalTRBL':
                 movementKeyframes = `@keyframes ${animationName} {
-                    from { left: 110%; top: -10%; }
-                    to { left: -10%; top: 110%; }
+                    from { left: 120%; top: -20%; }
+                    to { left: -20%; top: 120%; }
                 }`;
                 animations.push(`${animationName} ${duration} linear infinite`);
                 break;
 
             case 'diagonalBLTR':
                 movementKeyframes = `@keyframes ${animationName} {
-                    from { left: -10%; top: 110%; }
-                    to { left: 110%; top: -10%; }
+                    from { left: -20%; top: 120%; }
+                    to { left: 120%; top: -20%; }
                 }`;
                 animations.push(`${animationName} ${duration} linear infinite`);
                 break;
 
             case 'diagonalBRTL':
                 movementKeyframes = `@keyframes ${animationName} {
-                    from { left: 110%; top: 110%; }
-                    to { left: -10%; top: -10%; }
+                    from { left: 120%; top: 120%; }
+                    to { left: -20%; top: -20%; }
                 }`;
                 animations.push(`${animationName} ${duration} linear infinite`);
                 break;
@@ -966,11 +1034,11 @@
 
             case 'zigzag':
                 movementKeyframes = `@keyframes ${animationName} {
-                    0% { left: -10%; top: 20%; }
+                    0% { left: -20%; top: 20%; }
                     25% { left: 30%; top: 80%; }
                     50% { left: 50%; top: 20%; }
                     75% { left: 80%; top: 80%; }
-                    100% { left: 110%; top: 20%; }
+                    100% { left: 120%; top: 20%; }
                 }`;
                 animations.push(`${animationName} ${duration} linear infinite`);
                 break;
@@ -1119,6 +1187,178 @@
             return func.toString() + '\ninitAnimation(config);';
         }
 
+        // 載入設定並回填表單
+        function loadConfig(config) {
+            // 載入圖片
+            if (config.image) {
+                const preview = document.getElementById('preview');
+                preview.innerHTML = `<img src="${config.image}" alt="preview">`;
+            }
+
+            // 載入移動設定
+            if (config.movement) {
+                document.getElementById('moveMode').value = config.movement.mode || 'static';
+                document.getElementById('speed').value = config.movement.speed || 5;
+                document.getElementById('speed').dispatchEvent(new Event('input'));
+                document.getElementById('stayDuration').value = config.movement.stayDuration || 1;
+                document.getElementById('stayDuration').dispatchEvent(new Event('input'));
+                document.getElementById('fade').checked = config.movement.fade || false;
+
+                if (config.movement.horizontalPosition) {
+                    document.querySelector(`input[name="horizontalPosition"][value="${config.movement.horizontalPosition}"]`).checked = true;
+                }
+                if (config.movement.horizontalLoopPosition) {
+                    document.querySelector(`input[name="horizontalLoopPosition"][value="${config.movement.horizontalLoopPosition}"]`).checked = true;
+                }
+                if (config.movement.verticalPosition) {
+                    document.querySelector(`input[name="verticalPosition"][value="${config.movement.verticalPosition}"]`).checked = true;
+                }
+                if (config.movement.verticalLoopPosition) {
+                    document.querySelector(`input[name="verticalLoopPosition"][value="${config.movement.verticalLoopPosition}"]`).checked = true;
+                }
+                if (config.movement.horizontalLoopStart) {
+                    document.querySelector(`input[name="horizontalLoopStart"][value="${config.movement.horizontalLoopStart}"]`).checked = true;
+                }
+                if (config.movement.verticalLoopStart) {
+                    document.querySelector(`input[name="verticalLoopStart"][value="${config.movement.verticalLoopStart}"]`).checked = true;
+                }
+                if (config.movement.circleRadius) {
+                    document.getElementById('circleRadius').value = config.movement.circleRadius;
+                    document.getElementById('circleRadius').dispatchEvent(new Event('input'));
+                }
+                if (config.movement.circleCenter) {
+                    document.querySelector(`input[name="circleCenter"][value="${config.movement.circleCenter}"]`).checked = true;
+                }
+
+                updatePositionVisibility();
+            }
+
+            // 載入翻轉設定
+            if (config.flip) {
+                document.querySelector(`input[name="flip"][value="${config.flip}"]`).checked = true;
+            }
+
+            // 載入特效設定
+            if (config.effects) {
+                // 旋轉
+                if (config.effects.rotate) {
+                    document.getElementById('rotateEnable').checked = config.effects.rotate.enabled;
+                    document.getElementById('rotateEnable').dispatchEvent(new Event('change'));
+                    document.getElementById('rotateMode').value = config.effects.rotate.mode;
+                    document.getElementById('rotateSpeed').value = config.effects.rotate.speed;
+                    document.getElementById('rotateSpeed').dispatchEvent(new Event('input'));
+                }
+                // 縮放
+                if (config.effects.scale) {
+                    document.getElementById('scaleEnable').checked = config.effects.scale.enabled;
+                    document.getElementById('scaleEnable').dispatchEvent(new Event('change'));
+                    document.getElementById('scaleMode').value = config.effects.scale.mode;
+                    document.getElementById('scaleRange').value = config.effects.scale.range;
+                    document.getElementById('scaleRange').dispatchEvent(new Event('input'));
+                }
+                // 扭曲
+                if (config.effects.skew) {
+                    document.getElementById('skewEnable').checked = config.effects.skew.enabled;
+                    document.getElementById('skewEnable').dispatchEvent(new Event('change'));
+                    document.getElementById('skewDirection').value = config.effects.skew.direction;
+                    document.getElementById('skewStrength').value = config.effects.skew.strength;
+                    document.getElementById('skewStrength').dispatchEvent(new Event('input'));
+                }
+                // 傾斜
+                if (config.effects.tilt) {
+                    document.getElementById('tiltEnable').checked = config.effects.tilt.enabled;
+                    document.getElementById('tiltEnable').dispatchEvent(new Event('change'));
+                    document.getElementById('tiltMode').value = config.effects.tilt.mode;
+                    document.getElementById('tiltAngle').value = config.effects.tilt.angle;
+                    document.getElementById('tiltAngle').dispatchEvent(new Event('input'));
+                }
+                // 模糊
+                if (config.effects.blur) {
+                    document.getElementById('blurEnable').checked = config.effects.blur.enabled;
+                    document.getElementById('blurEnable').dispatchEvent(new Event('change'));
+                    document.getElementById('blurType').value = config.effects.blur.type;
+                    document.getElementById('blurStrength').value = config.effects.blur.strength;
+                    document.getElementById('blurStrength').dispatchEvent(new Event('input'));
+                }
+                // 陰影
+                if (config.effects.shadow) {
+                    document.getElementById('shadowEnable').checked = config.effects.shadow.enabled;
+                    document.getElementById('shadowEnable').dispatchEvent(new Event('change'));
+                    document.getElementById('shadowType').value = config.effects.shadow.type;
+                    document.getElementById('shadowColor').value = config.effects.shadow.color;
+                    document.getElementById('shadowStrength').value = config.effects.shadow.strength;
+                    document.getElementById('shadowStrength').dispatchEvent(new Event('input'));
+                }
+                // 色相旋轉
+                if (config.effects.hueRotate) {
+                    document.getElementById('hueEnable').checked = config.effects.hueRotate.enabled;
+                    document.getElementById('hueEnable').dispatchEvent(new Event('change'));
+                    document.getElementById('hueSpeed').value = config.effects.hueRotate.speed;
+                    document.getElementById('hueSpeed').dispatchEvent(new Event('input'));
+                }
+                // 3D旋轉
+                if (config.effects.rotate3d) {
+                    document.getElementById('rotate3dEnable').checked = config.effects.rotate3d.enabled;
+                    document.getElementById('rotate3dEnable').dispatchEvent(new Event('change'));
+                    document.getElementById('rotate3dAxis').value = config.effects.rotate3d.axis;
+                    document.getElementById('rotate3dSpeed').value = config.effects.rotate3d.speed;
+                    document.getElementById('rotate3dSpeed').dispatchEvent(new Event('input'));
+                }
+                // 抖動
+                if (config.effects.shake) {
+                    document.getElementById('shakeEnable').checked = config.effects.shake.enabled;
+                    document.getElementById('shakeEnable').dispatchEvent(new Event('change'));
+                    document.getElementById('shakeStrength').value = config.effects.shake.strength;
+                    document.getElementById('shakeStrength').dispatchEvent(new Event('input'));
+                }
+            }
+
+            // 載入其他設定
+            if (config.size) {
+                document.getElementById('size').value = config.size;
+                document.getElementById('size').dispatchEvent(new Event('input'));
+            }
+            if (config.opacity !== undefined) {
+                document.getElementById('opacity').value = config.opacity;
+                document.getElementById('opacity').dispatchEvent(new Event('input'));
+            }
+        }
+
+        // 匯入動畫檔案
+        function importAnimation() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.html';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const htmlContent = event.target.result;
+
+                    // 從 HTML 註解中提取設定
+                    const match = htmlContent.match(/<!-- CONFIG_DATA:([^-]+) -->/);
+                    if (!match) {
+                        alert('此檔案不包含設定資訊！');
+                        return;
+                    }
+
+                    try {
+                        const configJSON = decodeURIComponent(atob(match[1]));
+                        const config = JSON.parse(configJSON);
+                        loadConfig(config);
+                        alert('匯入成功！');
+                    } catch (err) {
+                        console.error('匯入錯誤:', err);
+                        alert('匯入失敗：' + err.message);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
         // 重置設定
         function resetSettings() {
             if (confirm('確定要重置所有設定？')) {
@@ -1135,34 +1375,38 @@
                     fade: false,
                     effects: {}
                 },
+                subscribe: {
+                    moveMode: 'leftToRight',
+                    speed: 8,
+                    fade: false,
+                    effects: {
+                        hueEnable: true,
+                        hueSpeed: 10,
+                        scaleEnable: true,
+                        scaleMode: 'pulse',
+                        scaleRange: 1.3
+                    }
+                },
+                energyBall: {
+                    moveMode: 'circle',
+                    speed: 5,
+                    circleRadius: 200,
+                    fade: false,
+                    effects: {
+                        shadowEnable: true,
+                        shadowType: 'glow',
+                        shadowColor: '#ff8800',
+                        shadowStrength: 20,
+                        hueEnable: true,
+                        hueSpeed: 5
+                    }
+                },
                 float: {
                     moveMode: 'verticalLoop',
                     speed: 2,
                     fade: true,
+                    verticalLoopPosition: 'random',
                     effects: {}
-                },
-                neon: {
-                    moveMode: 'static',
-                    speed: 5,
-                    fade: false,
-                    effects: {
-                        hueEnable: true,
-                        hueSpeed: 5,
-                        shadowEnable: true,
-                        shadowType: 'glow',
-                        shadowColor: '#00ffff',
-                        shadowStrength: 15
-                    }
-                },
-                roll: {
-                    moveMode: 'leftToRight',
-                    speed: 5,
-                    fade: false,
-                    effects: {
-                        rotateEnable: true,
-                        rotateMode: 'clockwise',
-                        rotateSpeed: 5
-                    }
                 },
                 randomPop: {
                     moveMode: 'randomAppear',
@@ -1170,6 +1414,17 @@
                     stayDuration: 2,
                     fade: true,
                     effects: {}
+                },
+                padoru: {
+                    moveMode: 'horizontalLoop',
+                    speed: 8,
+                    fade: false,
+                    horizontalLoopPosition: 'random',
+                    effects: {
+                        rotate3dEnable: true,
+                        rotate3dAxis: 'y',
+                        rotate3dSpeed: 10
+                    }
                 }
             };
 
@@ -1183,6 +1438,23 @@
             if (t.stayDuration !== undefined) {
                 document.getElementById('stayDuration').value = t.stayDuration;
                 document.getElementById('stayDuration').dispatchEvent(new Event('input'));
+            }
+
+            // 圓周半徑
+            if (t.circleRadius !== undefined) {
+                document.getElementById('circleRadius').value = t.circleRadius;
+                document.getElementById('circleRadius').dispatchEvent(new Event('input'));
+            }
+
+            // 觸發移動模式變更以更新顯示
+            document.getElementById('moveMode').dispatchEvent(new Event('change'));
+
+            // 位置設定
+            if (t.horizontalLoopPosition) {
+                document.querySelector(`input[name="horizontalLoopPosition"][value="${t.horizontalLoopPosition}"]`).checked = true;
+            }
+            if (t.verticalLoopPosition) {
+                document.querySelector(`input[name="verticalLoopPosition"][value="${t.verticalLoopPosition}"]`).checked = true;
             }
 
             // 翻轉
