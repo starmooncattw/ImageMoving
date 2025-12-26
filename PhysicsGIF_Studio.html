@@ -90,8 +90,8 @@
             <input type="range" id="strength" min="0" max="100" value="0" oninput="updateParam('strength', this.value)">
         </div>
         <div class="control-item">
-            <label>速度 (Speed) <span id="val_speed">5</span></label>
-            <input type="range" id="speed" min="0.1" max="30" step="0.1" value="5" oninput="updateParam('speed', this.value)">
+            <label>速度 (Speed) <span id="val_speed">2</span></label>
+            <input type="range" id="speed" min="0.1" max="30" step="0.1" value="2" oninput="updateParam('speed', this.value)">
         </div>
     </div>
 
@@ -106,11 +106,24 @@
                 <option value="slideUp">上滑入</option>
                 <option value="slideDown">下滑入</option>
                 <option value="parrot">鸚鵡圓軌</option>
+                <option value="circleCustom">可調圓周</option>
+                <option value="horizontalLoop">水平來回</option>
+                <option value="verticalLoop">垂直來回</option>
+                <option value="zigzag">之字形</option>
+                <option value="randomBounce">隨機彈跳</option>
             </select>
         </div>
         <div class="control-item">
             <label>移動距離 <span id="val_moveDist">400</span></label>
             <input type="range" id="moveDist" min="100" max="800" value="400" oninput="updateParam('moveDist', this.value)">
+        </div>
+        <div class="control-item">
+            <label>圓周半徑 <span id="val_circleRadius">100</span></label>
+            <input type="range" id="circleRadius" min="50" max="400" value="100" oninput="updateParam('circleRadius', this.value)">
+        </div>
+        <div class="control-item">
+            <label>之字幅度 <span id="val_zigzagAmp">50</span></label>
+            <input type="range" id="zigzagAmp" min="20" max="200" value="50" oninput="updateParam('zigzagAmp', this.value)">
         </div>
         <div class="control-item">
             <label>不倒翁搖擺 <span id="val_wobble">0</span></label>
@@ -138,6 +151,20 @@
 
     <div class="panel-title" style="margin-top:10px;">視覺濾鏡</div>
     <div class="control-grid">
+        <div class="control-item"><label>透明度 <span id="val_opacity">100</span>%</label><input type="range" id="opacity" min="0" max="100" value="100" oninput="updateParam('opacity', this.value/100)"></div>
+        <div class="control-item">
+            <label>陰影/發光</label>
+            <select id="shadowType" onchange="updateParam('shadowType', this.value)">
+                <option value="none">無</option>
+                <option value="drop">投影</option>
+                <option value="glow">發光</option>
+            </select>
+        </div>
+        <div class="control-item"><label>陰影強度 <span id="val_shadowBlur">10</span></label><input type="range" id="shadowBlur" min="0" max="50" value="10" oninput="updateParam('shadowBlur', this.value)"></div>
+        <div class="control-item">
+            <label>陰影顏色</label>
+            <input type="color" id="shadowColor" value="#000000" oninput="updateParam('shadowColor', this.value)">
+        </div>
         <div class="control-item"><label>模糊 <span id="val_blur">0</span></label><input type="range" id="blur" min="0" max="20" value="0" oninput="updateParam('blur', this.value)"></div>
         <div class="control-item"><label>馬賽克 <span id="val_pixel">1</span></label><input type="range" id="pixel" min="1" max="30" value="1" oninput="updateParam('pixel', this.value)"></div>
         <div class="control-item"><label>波浪 <span id="val_wave">0</span></label><input type="range" id="wave" min="0" max="50" value="0" oninput="updateParam('wave', this.value)"></div>
@@ -192,6 +219,13 @@
         <div class="toggle-btn"><input type="checkbox" id="grayscale" onchange="updateParam('grayscale', this.checked)"><label for="grayscale">灰階</label></div>
     </div>
 
+    <div class="control-grid" id="lakeGapControl" style="margin-top: 10px; display: none;">
+        <div class="control-item">
+            <label>倒影間距 <span id="val_lakeGap">0</span>px</label>
+            <input type="range" id="lakeGap" min="-100" max="100" value="0" oninput="updateParam('lakeGap', this.value)">
+        </div>
+    </div>
+
     <div class="panel-title">輸出設定</div>
     <div class="control-grid">
         <div class="control-item"><label>寬度</label><input type="number" id="canvasW" value="300" onchange="updateCanvasSize()"></div>
@@ -236,13 +270,15 @@
     // 參數狀態
     const defaultParams = {
         baseScale: 0.8,
-        physicsMode: 'none', strength: 30, speed: 10,
-        moveMode: 'none', moveDist: 400,
+        physicsMode: 'none', strength: 30, speed: 2,
+        moveMode: 'none', moveDist: 400, circleRadius: 100, zigzagAmp: 50,
         rotateMode: 'none', wobble: 0, scaleMode: 'none',
         blur: 0, pixel: 1, wave: 0, noise: 0, glitch: 0, hue: 0, recursive: 0,
         particle: 'none', particleSpeed: 0.1,
         backFaceMode: 'mirror', backFaceColor: '#ffeb3b',
-        mirror: false, lake: false, invert: false, sepia: false, grayscale: false,
+        mirror: false, lake: false, lakeGap: 0, invert: false, sepia: false, grayscale: false,
+        shadowType: 'none', shadowColor: '#000000', shadowBlur: 10,
+        opacity: 1.0,
         offsetX: 0, offsetY: 0
     };
     let params = { ...defaultParams };
@@ -327,24 +363,38 @@
     function syncAllControls() {
         const keys = [
             'baseScale', 'physicsMode', 'strength', 'speed', 'wobble',
-            'moveMode', 'moveDist', 'rotateMode', 'scaleMode',
+            'moveMode', 'moveDist', 'circleRadius', 'zigzagAmp', 'rotateMode', 'scaleMode',
             'blur', 'pixel', 'wave', 'noise', 'glitch', 'hue', 'recursive', 'particle',
-            'backFaceMode'
+            'backFaceMode', 'shadowType', 'shadowBlur', 'particleSpeed', 'lakeGap'
         ];
         keys.forEach(k => {
             const el = document.getElementById(k);
             if(el) {
                 el.value = params[k];
                 const span = document.getElementById(`val_${k}`);
-                if(span) span.innerText = params[k];
+                if(span) {
+                    if (k === 'opacity') {
+                        span.innerText = Math.round(params[k] * 100);
+                    } else {
+                        span.innerText = params[k];
+                    }
+                }
             }
         });
+        // 透明度特殊處理（0-100%）
+        const opacitySlider = document.getElementById('opacity');
+        if (opacitySlider) opacitySlider.value = params.opacity * 100;
+        const opacitySpan = document.getElementById('val_opacity');
+        if (opacitySpan) opacitySpan.innerText = Math.round(params.opacity * 100);
+
         ['mirror', 'lake', 'invert', 'sepia', 'grayscale'].forEach(k => {
             const el = document.getElementById(k);
             if(el) el.checked = params[k];
         });
         const colPick = document.getElementById('backFaceColor');
         if(colPick) colPick.value = params.backFaceColor;
+        const shadowCol = document.getElementById('shadowColor');
+        if(shadowCol) shadowCol.value = params.shadowColor;
     }
 
     function updateParam(key, value) {
@@ -353,9 +403,23 @@
         params[key] = value;
         if(typeof value === 'number') {
             const span = document.getElementById(`val_${key}`);
-            if(span) span.innerText = value;
+            if(span) {
+                if (key === 'opacity') {
+                    span.innerText = Math.round(value * 100);
+                } else {
+                    span.innerText = value;
+                }
+            }
         }
         if (key === 'particle') initParticles();
+
+        // 控制倒影間距的顯示/隱藏
+        if (key === 'lake') {
+            const lakeGapControl = document.getElementById('lakeGapControl');
+            if (lakeGapControl) {
+                lakeGapControl.style.display = value ? 'grid' : 'none';
+            }
+        }
     }
 
     // === 4. 渲染核心 (修復 Mirror/Lake) ===
@@ -377,14 +441,33 @@
         // 1. 畫本體 (包含 Mirror 邏輯)
         drawEntities(cx, cy, t, false);
 
-        // 2. 如果有倒影 (Lake)，在上層畫倒影
+        // 2. 如果有倒影 (Lake)，在原圖下方畫倒影
         if (params.lake) {
             ctx.save();
-            ctx.globalAlpha = 0.4;
-            // 倒影：垂直翻轉，放在下方
-            ctx.translate(0, canvas.height);
+            // 計算圖片基礎高度（考慮可能的縮放，預留安全邊界）
+            const baseSize = Math.min(canvas.width, canvas.height) * params.baseScale;
+            const ratio = sourceImage.width / sourceImage.height;
+            let imgHeight = baseSize / ratio;
+            if (ratio < 1) imgHeight = baseSize;
+
+            // 倒影起點 = 圖片中心 + 圖片高度的一半（已包含 baseScale）+ 自訂間距
+            const reflectionTop = cy + imgHeight / 2 + params.lakeGap;
+
+            // 設定倒影區域的裁切（只顯示圖片下方的倒影）
+            ctx.beginPath();
+            ctx.rect(0, reflectionTop, canvas.width, canvas.height - reflectionTop);
+            ctx.clip();
+
+            // 倒影：以圖片底部為軸，垂直翻轉
+            ctx.translate(0, reflectionTop * 2);
             ctx.scale(1, -1);
-            drawEntities(cx, cy, t, true); // true = inside reflection
+
+            // 繪製倒影內容（降低透明度並加上灰色濾鏡）
+            ctx.globalAlpha = 0.3;
+            ctx.filter = 'brightness(0.5) saturate(0.3)'; // 變暗 + 降低飽和度
+            drawEntities(cx, cy, t, true);
+            ctx.filter = 'none';
+
             ctx.restore();
         }
 
@@ -394,36 +477,52 @@
 
     // 繪製實體 (處理 Mirror)
     function drawEntities(cx, cy, t, isReflection) {
-        // 如果在倒影中，不要再畫倒影（避免無限遞迴）
-        if (isReflection && params.lake) return;
-
         const offset = params.mirror ? canvas.width * 0.2 : 0; // 鏡像時左右分開
 
         if (params.mirror) {
             // 左邊 (本尊)
             ctx.save();
             ctx.translate(-offset, 0);
-            drawCharacter(cx, cy, t, false);
+            drawCharacter(cx, cy, t, false, isReflection);
             ctx.restore();
 
             // 右邊 (分身/鏡像)
             ctx.save();
-            ctx.translate(offset, 0); 
+            ctx.translate(offset, 0);
             // 鏡像翻轉：以中心為軸
             ctx.translate(cx, cy);
             ctx.scale(-1, 1);
             ctx.translate(-cx, -cy);
-            drawCharacter(cx, cy, t, true); // isMirrored = true
+            drawCharacter(cx, cy, t, true, isReflection); // isMirrored = true
             ctx.restore();
         } else {
             // 單一角色
-            drawCharacter(cx, cy, t, false);
+            drawCharacter(cx, cy, t, false, isReflection);
         }
     }
 
     // 繪製單一角色 (應用物理與特效)
-    function drawCharacter(cx, cy, t, isMirroredObj) {
+    function drawCharacter(cx, cy, t, isMirroredObj, isReflection = false) {
         ctx.save();
+
+        // 套用全域透明度（倒影不受此影響，另外處理）
+        if (!isReflection) {
+            ctx.globalAlpha = params.opacity;
+        }
+
+        // 套用陰影/發光效果（倒影不需要陰影）
+        if (!isReflection && params.shadowType === 'drop') {
+            ctx.shadowColor = params.shadowColor;
+            ctx.shadowBlur = params.shadowBlur;
+            ctx.shadowOffsetX = params.shadowBlur * 0.3;
+            ctx.shadowOffsetY = params.shadowBlur * 0.3;
+        } else if (!isReflection && params.shadowType === 'glow') {
+            ctx.shadowColor = params.shadowColor;
+            ctx.shadowBlur = params.shadowBlur;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+        }
+
         ctx.translate(cx, cy);
 
         // --- 物理計算 ---
@@ -492,6 +591,27 @@
         if (params.moveMode === 'slideUp') motionY = -params.moveDist * (1 - Math.min(1, (t%60)/30));
         if (params.moveMode === 'slideDown') motionY = params.moveDist * (1 - Math.min(1, (t%60)/30));
         if (params.moveMode === 'parrot') { motionX = Math.cos(cycle)*40; motionY = Math.sin(cycle)*40; }
+        if (params.moveMode === 'circleCustom') {
+            motionX = Math.cos(cycle) * params.circleRadius;
+            motionY = Math.sin(cycle) * params.circleRadius;
+        }
+        if (params.moveMode === 'horizontalLoop') {
+            motionX = Math.sin(cycle * 0.5) * params.moveDist * 0.5;
+        }
+        if (params.moveMode === 'verticalLoop') {
+            motionY = Math.sin(cycle * 0.5) * params.moveDist * 0.5;
+        }
+        if (params.moveMode === 'zigzag') {
+            motionX = (t % 60) * (params.moveDist / 60) - params.moveDist * 0.5;
+            motionY = Math.sin(cycle * 2) * params.zigzagAmp;
+        }
+        if (params.moveMode === 'randomBounce') {
+            const bounceX = Math.sin(cycle * 1.3 + 1) * params.moveDist * 0.3;
+            const bounceY = Math.sin(cycle * 1.7 + 2) * params.moveDist * 0.3;
+            // 碰壁反彈效果（簡化版）
+            motionX = bounceX;
+            motionY = bounceY;
+        }
         if (params.rotateMode === 'spinCW') motionRot = cycle;
         if (params.rotateMode === 'spinCCW') motionRot = -cycle;
         if (params.scaleMode === 'pulse') { const ps = 1+Math.sin(cycle)*0.1; motionScaleX=ps; motionScaleY=ps; }
@@ -612,18 +732,53 @@
         particles = [];
         if (params.particle === 'none') return;
         const count = params.particle === 'sparkle' ? 30 : (params.particle === 'confetti' ? 150 : 15);
-        for(let i=0; i<count; i++) {
-            particles.push({
-                startX: Math.random()*canvas.width,
-                startY: Math.random()*canvas.height,
-                s: Math.random()*0.5+0.5,
-                v: Math.random()*2+1,
-                o: Math.random()*Math.PI*2,
-                vx: (Math.random()-0.5)*2, // 水平速度（泡泡、櫻花用）
-                rotSpeed: (Math.random()-0.5)*5, // 旋轉速度
-                color: `hsl(${Math.random()*360}, 70%, 60%)`, // 隨機顏色（彩紙用）
-                offset: Math.random() * 1000 // 時間偏移，避免同步
-            });
+
+        // 固定位置的粒子（愛心、星星、閃光）使用網格分布
+        const useGrid = ['heart', 'star', 'sparkle'].includes(params.particle);
+
+        if (useGrid) {
+            // 計算網格尺寸
+            const cols = Math.ceil(Math.sqrt(count * (canvas.width / canvas.height)));
+            const rows = Math.ceil(count / cols);
+            const cellW = canvas.width / cols;
+            const cellH = canvas.height / rows;
+
+            let idx = 0;
+            for(let row = 0; row < rows && idx < count; row++) {
+                for(let col = 0; col < cols && idx < count; col++) {
+                    // 在每個網格內隨機偏移，避免過於規則
+                    const offsetX = (Math.random() - 0.5) * cellW * 0.6;
+                    const offsetY = (Math.random() - 0.5) * cellH * 0.6;
+
+                    particles.push({
+                        startX: col * cellW + cellW / 2 + offsetX,
+                        startY: row * cellH + cellH / 2 + offsetY,
+                        s: Math.random()*0.5+0.6,
+                        v: Math.random()*2+1,
+                        o: Math.random()*Math.PI*2,
+                        vx: (Math.random()-0.5)*2,
+                        rotSpeed: (Math.random()-0.5)*5,
+                        color: `hsl(${Math.random()*360}, 70%, 60%)`,
+                        offset: Math.random() * 1000
+                    });
+                    idx++;
+                }
+            }
+        } else {
+            // 移動粒子（下雪、泡泡等）使用隨機分布
+            for(let i=0; i<count; i++) {
+                particles.push({
+                    startX: Math.random()*canvas.width,
+                    startY: Math.random()*canvas.height,
+                    s: Math.random()*0.5+0.5,
+                    v: Math.random()*2+1,
+                    o: Math.random()*Math.PI*2,
+                    vx: (Math.random()-0.5)*2,
+                    rotSpeed: (Math.random()-0.5)*5,
+                    color: `hsl(${Math.random()*360}, 70%, 60%)`,
+                    offset: Math.random() * 1000
+                });
+            }
         }
     }
     function drawParticles(currentTime) {
@@ -635,35 +790,43 @@
             const t = (currentTime * params.particleSpeed) + p.offset;
             let x, y, rot;
 
+            // 使用固定循環週期，確保完美循環
+            const cycleHeight = canvas.height + 60; // 循環區域高度（含緩衝）
+            const cycleWidth = canvas.width + 60;
+
             if (params.particle === 'bubble') {
-                y = p.startY - (t * p.v * 0.5);
+                // 向上飄，使用模運算確保平滑循環
+                const movement = (t * p.v * 0.5) % cycleHeight;
+                y = (p.startY - movement + cycleHeight) % cycleHeight - 30;
                 x = p.startX + Math.sin(t * 0.05 + p.o) * 30;
-                // 循環：當泡泡飛出上方時，從下方重新開始
-                y = ((y % (canvas.height + 40)) + (canvas.height + 40)) % (canvas.height + 40) - 20;
+                x = ((x % cycleWidth) + cycleWidth) % cycleWidth - 30;
             } else if (params.particle === 'sakura') {
-                y = p.startY + (t * p.v * 0.8);
+                // 向下飄落 + 左右擺動
+                const movement = (t * p.v * 0.8) % cycleHeight;
+                y = (p.startY + movement) % cycleHeight - 30;
                 x = p.startX + Math.sin(t * 0.03 + p.o) * 50;
+                x = ((x % cycleWidth) + cycleWidth) % cycleWidth - 30;
                 rot = t * p.rotSpeed;
-                // 循環：櫻花落到底部後從頂部重新開始
-                y = y % (canvas.height + 40) - 20;
             } else if (params.particle === 'firefly') {
-                y = p.startY + Math.sin(t * 0.05 + p.o) * 100;
-                x = p.startX + Math.cos(t * 0.05 + p.o) * 100;
-                // 邊界包裹
-                x = ((x % canvas.width) + canvas.width) % canvas.width;
-                y = ((y % canvas.height) + canvas.height) % canvas.height;
+                // 圓周運動，完美循環
+                y = canvas.height / 2 + Math.sin(t * 0.05 + p.o) * (canvas.height * 0.4);
+                x = canvas.width / 2 + Math.cos(t * 0.05 + p.o) * (canvas.width * 0.4);
             } else if (params.particle === 'confetti') {
-                y = p.startY + (t * p.v);
-                x = p.startX + (t * p.vx);
+                // 彩紙下落 + 水平飄移
+                const movement = (t * p.v) % cycleHeight;
+                y = (p.startY + movement) % cycleHeight - 30;
+                const xMovement = (t * p.vx) % cycleWidth;
+                x = (p.startX + xMovement + cycleWidth) % cycleWidth - 30;
                 rot = t * p.rotSpeed;
-                // 循環
-                y = y % (canvas.height + 40) - 20;
-            } else {
-                // 下雪、愛心、星星
-                y = p.startY + (t * p.v);
+            } else if (params.particle === 'heart' || params.particle === 'star' || params.particle === 'sparkle') {
+                // 愛心、星星、閃光 - 固定位置，放大縮小動畫
                 x = p.startX;
-                // 循環
-                y = y % (canvas.height + 40) - 20;
+                y = p.startY;
+            } else {
+                // 下雪 - 垂直下落
+                const movement = (t * p.v) % cycleHeight;
+                y = (p.startY + movement) % cycleHeight - 30;
+                x = p.startX;
             }
 
             ctx.save();
@@ -671,8 +834,14 @@
             if (params.particle === 'sakura' || params.particle === 'confetti') {
                 ctx.rotate(rot * Math.PI / 180);
             }
-            // 移除快速放大縮小，使用固定大小
-            ctx.scale(p.s, p.s);
+
+            // 愛心、星星、閃光使用放大縮小動畫
+            if (params.particle === 'heart' || params.particle === 'star' || params.particle === 'sparkle') {
+                const pulseScale = p.s * (0.8 + Math.abs(Math.sin(t * 0.1 + p.o)) * 0.5);
+                ctx.scale(pulseScale, pulseScale);
+            } else {
+                ctx.scale(p.s, p.s);
+            }
 
             // 繪製不同粒子
             if (params.particle === 'snow') {

@@ -6,42 +6,57 @@
     <title>Animation HTML Generator - 動畫HTML產生器</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Microsoft JhengHei', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
-        .container { max-width: 800px; margin: 0 auto; background: white; border-radius: 15px; padding: 30px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
-        h1 { text-align: center; color: #333; margin-bottom: 30px; }
-        .section { margin-bottom: 25px; padding: 20px; background: #f8f9fa; border-radius: 10px; }
-        .section h2 { font-size: 18px; margin-bottom: 15px; color: #667eea; cursor: pointer; user-select: none; }
+        body { font-family: 'Microsoft JhengHei', sans-serif; background: #121212; display: flex; overflow: hidden; height: 100vh; }
+
+        /* 左側控制面板 */
+        .sidebar { width: 480px; background: #1e1e1e; border-right: 1px solid #333; display: flex; flex-direction: column; padding: 15px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #555 #1e1e1e; }
+        .sidebar::-webkit-scrollbar { width: 8px; }
+        .sidebar::-webkit-scrollbar-track { background: #1e1e1e; }
+        .sidebar::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
+
+        /* 右側預覽區 */
+        .preview-area { flex: 1; background-color: #252525; background-image: linear-gradient(45deg, #2a2a2a 25%, transparent 25%), linear-gradient(-45deg, #2a2a2a 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #2a2a2a 75%), linear-gradient(-45deg, transparent 75%, #2a2a2a 75%); background-size: 20px 20px; display: flex; align-items: center; justify-content: center; position: relative; }
+
+        .container { max-width: 100%; background: transparent; border-radius: 0; padding: 0; box-shadow: none; }
+        h1 { text-align: center; color: #ffeb3b; margin-bottom: 20px; font-size: 22px; }
+        .section { margin-bottom: 15px; padding: 15px; background: #2a2a2a; border-radius: 8px; border: 1px solid #444; }
+        .section h2 { font-size: 16px; margin-bottom: 12px; color: #ffeb3b; cursor: pointer; user-select: none; }
         .section h2::before { content: '▼ '; font-size: 12px; }
         .section.collapsed h2::before { content: '▶ '; }
         .section.collapsed .content { display: none; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
-        input[type="file"], input[type="number"], input[type="color"], select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #ccc; font-size: 14px; }
+        input[type="file"], input[type="number"], input[type="color"], select { width: 100%; padding: 8px; border: 1px solid #555; border-radius: 5px; background: #1e1e1e; color: #fff; }
+        input[type="text"] { width: 100%; padding: 8px; border: 1px solid #555; border-radius: 5px; background: #1e1e1e; color: #fff; }
+        small { color: #999; }
         input[type="range"] { width: 100%; }
         .range-label { display: flex; justify-content: space-between; font-size: 12px; color: #888; }
         .checkbox-group { display: flex; align-items: center; gap: 10px; }
         .checkbox-group input[type="checkbox"] { width: auto; }
-        .effect-item { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; border: 2px solid #e0e0e0; }
-        .effect-item.enabled { border-color: #667eea; }
+        .effect-item { background: #1e1e1e; padding: 12px; margin-bottom: 8px; border-radius: 6px; border: 2px solid #444; }
+        .effect-item.enabled { border-color: #ffeb3b; }
         .effect-controls { margin-top: 10px; display: none; }
         .effect-item.enabled .effect-controls { display: block; }
-        .preview { width: 200px; height: 200px; border: 2px dashed #ddd; margin: 10px auto; display: flex; align-items: center; justify-content: center; background: #f0f0f0; position: relative; overflow: hidden; }
-        .preview img { max-width: 100%; max-height: 100%; object-fit: contain; }
-        .buttons { display: flex; gap: 10px; margin-top: 20px; }
-        .btn { flex: 1; padding: 12px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; transition: 0.3s; }
-        .btn-primary { background: #667eea; color: white; }
-        .btn-primary:hover { background: #5568d3; }
-        .btn-secondary { background: #6c757d; color: white; }
-        .btn-secondary:hover { background: #5a6268; }
-        .radio-group { display: flex; gap: 15px; flex-wrap: wrap; }
-        .radio-group label { font-weight: normal; display: flex; align-items: center; gap: 5px; }
-        .template-btn { padding: 8px 15px; margin: 5px; border: 1px solid #667eea; background: white; color: #667eea; border-radius: 5px; cursor: pointer; }
-        .template-btn:hover { background: #667eea; color: white; }
+        .buttons { display: flex; gap: 10px; margin-top: 15px; }
+        .btn { flex: 1; padding: 10px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; transition: 0.3s; }
+        .btn-primary { background: #ffeb3b; color: #000; font-weight: bold; }
+        .btn-primary:hover { background: #ffd700; }
+        .btn-secondary { background: #555; color: white; }
+        .btn-secondary:hover { background: #666; }
+        .template-btn { padding: 6px 12px; margin: 4px; border: 1px solid #ffeb3b; background: #2a2a2a; color: #ffeb3b; border-radius: 5px; cursor: pointer; font-size: 13px; }
+        .template-btn:hover { background: #ffeb3b; color: #000; }
+        .radio-group { display: flex; gap: 12px; flex-wrap: wrap; }
+        .radio-group label { font-weight: normal; display: flex; align-items: center; gap: 5px; color: #ccc; font-size: 13px; }
+
+        /* 預覽區動畫容器 */
+        #animationContainer { position: relative; width: 95%; height: 90%; overflow: hidden; border: 2px solid #444; border-radius: 8px; }
+        #previewImg { position: absolute; will-change: transform, filter, opacity; transform-style: preserve-3d; pointer-events: none; height: auto; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🎨 Animation HTML Generator | 動畫HTML產生器</h1>
+    <!-- 左側控制面板 -->
+    <div class="sidebar">
+        <h1>🎨 Animation HTML Generator</h1>
 
         <!-- 操作按鈕 -->
         <div class="buttons">
@@ -56,9 +71,6 @@
                 <div class="form-group">
                     <label>圖片上傳 (JPG/PNG/GIF/WebP)</label>
                     <input type="file" id="imageFile" accept="image/*">
-                </div>
-                <div class="preview" id="preview">
-                    <span style="color: #999;">預覽區</span>
                 </div>
             </div>
         </div>
@@ -420,6 +432,17 @@
 
     </div>
 
+    <!-- 右側預覽區 -->
+    <div class="preview-area">
+        <div id="animationContainer">
+            <img id="previewImg" alt="Preview">
+        </div>
+    </div>
+
+    <style id="dynamicStyle">
+        /* 動態產生的 CSS 動畫會插入這裡 */
+    </style>
+
     <script>
 
         // 初始化
@@ -434,8 +457,20 @@
                 else if (id === 'blurStrength' || id === 'shadowStrength' || id === 'shakeStrength' || id === 'circleRadius') val += 'px';
                 else if (id === 'size' || id === 'opacity') val += '%';
                 display.textContent = val;
+
+                // 即時更新預覽
+                updatePreview();
             });
         });
+
+        // 監聽所有 select 和 checkbox 變更
+        document.querySelectorAll('select, input[type="checkbox"], input[type="radio"], input[type="color"]').forEach(el => {
+            el.addEventListener('change', updatePreview);
+        });
+
+        // Transform 衝突的特效組（這些特效會互相覆蓋）
+        const transformEffects = ['rotate', 'scale', 'skew', 'tilt', '3d', 'shake'];
+        const nonTransformEffects = ['blur', 'shadow', 'hue'];
 
         // 特效開關
         ['rotate', 'scale', 'skew', 'tilt', 'blur', 'shadow', 'hue', '3d', 'shake'].forEach(name => {
@@ -443,8 +478,44 @@
             const item = document.getElementById('effect-' + name);
             checkbox.addEventListener('change', () => {
                 item.classList.toggle('enabled', checkbox.checked);
+
+                // 如果是 transform 相關特效，處理互斥邏輯
+                if (transformEffects.includes(name)) {
+                    handleTransformConflict(name, checkbox.checked);
+                }
             });
         });
+
+        // 處理 transform 特效的互斥邏輯
+        function handleTransformConflict(currentEffect, isChecked) {
+            if (isChecked) {
+                // 禁用其他 transform 特效
+                transformEffects.forEach(effect => {
+                    if (effect !== currentEffect) {
+                        const otherCheckbox = document.getElementById(effect === '3d' ? 'rotate3dEnable' : effect + 'Enable');
+                        otherCheckbox.disabled = true;
+                        otherCheckbox.parentElement.style.opacity = '0.5';
+                        otherCheckbox.parentElement.style.cursor = 'not-allowed';
+                    }
+                });
+            } else {
+                // 檢查是否還有其他 transform 特效被勾選
+                const anyChecked = transformEffects.some(effect => {
+                    const cb = document.getElementById(effect === '3d' ? 'rotate3dEnable' : effect + 'Enable');
+                    return cb.checked;
+                });
+
+                // 如果沒有任何 transform 特效被勾選，恢復所有選項
+                if (!anyChecked) {
+                    transformEffects.forEach(effect => {
+                        const otherCheckbox = document.getElementById(effect === '3d' ? 'rotate3dEnable' : effect + 'Enable');
+                        otherCheckbox.disabled = false;
+                        otherCheckbox.parentElement.style.opacity = '1';
+                        otherCheckbox.parentElement.style.cursor = 'pointer';
+                    });
+                }
+            }
+        }
 
         // 移動模式選擇顯示對應位置設定
         const moveMode = document.getElementById('moveMode');
@@ -480,6 +551,11 @@
         moveMode.addEventListener('change', updatePositionVisibility);
         updatePositionVisibility();
 
+        // 全域變數
+        let currentImageData = null;
+        const previewImg = document.getElementById('previewImg');
+        const dynamicStyle = document.getElementById('dynamicStyle');
+
         // 圖片上傳
         document.getElementById('imageFile').addEventListener('change', function(e) {
             const file = e.target.files[0];
@@ -491,8 +567,8 @@
 
             const reader = new FileReader();
             reader.onload = function(event) {
-                const preview = document.getElementById('preview');
-                preview.innerHTML = `<img src="${event.target.result}" alt="preview">`;
+                currentImageData = event.target.result;
+                updatePreview(); // 立即更新預覽
             };
             reader.readAsDataURL(file);
         });
@@ -503,6 +579,379 @@
                 h2.parentElement.classList.toggle('collapsed');
             });
         });
+
+        // 取得目前所有設定
+        function getCurrentConfig() {
+            return {
+                image: currentImageData,
+                movement: {
+                    mode: document.getElementById('moveMode').value,
+                    speed: parseInt(document.getElementById('speed').value),
+                    stayDuration: parseFloat(document.getElementById('stayDuration').value),
+                    fade: document.getElementById('fade').checked,
+                    horizontalPosition: document.querySelector('input[name="horizontalPosition"]:checked')?.value || 'middle',
+                    horizontalLoopPosition: document.querySelector('input[name="horizontalLoopPosition"]:checked')?.value || 'middle',
+                    verticalPosition: document.querySelector('input[name="verticalPosition"]:checked')?.value || 'center',
+                    verticalLoopPosition: document.querySelector('input[name="verticalLoopPosition"]:checked')?.value || 'center',
+                    horizontalLoopStart: document.querySelector('input[name="horizontalLoopStart"]:checked')?.value || 'left',
+                    verticalLoopStart: document.querySelector('input[name="verticalLoopStart"]:checked')?.value || 'top',
+                    circleRadius: parseInt(document.getElementById('circleRadius').value),
+                    circleCenter: document.querySelector('input[name="circleCenter"]:checked')?.value || 'fixed'
+                },
+                flip: document.querySelector('input[name="flip"]:checked').value,
+                effects: {
+                    rotate: {
+                        enabled: document.getElementById('rotateEnable').checked,
+                        mode: document.getElementById('rotateMode').value,
+                        speed: parseInt(document.getElementById('rotateSpeed').value)
+                    },
+                    scale: {
+                        enabled: document.getElementById('scaleEnable').checked,
+                        mode: document.getElementById('scaleMode').value,
+                        range: parseFloat(document.getElementById('scaleRange').value)
+                    },
+                    skew: {
+                        enabled: document.getElementById('skewEnable').checked,
+                        direction: document.getElementById('skewDirection').value,
+                        strength: parseInt(document.getElementById('skewStrength').value)
+                    },
+                    tilt: {
+                        enabled: document.getElementById('tiltEnable').checked,
+                        mode: document.getElementById('tiltMode').value,
+                        angle: parseInt(document.getElementById('tiltAngle').value)
+                    },
+                    blur: {
+                        enabled: document.getElementById('blurEnable').checked,
+                        type: document.getElementById('blurType').value,
+                        strength: parseInt(document.getElementById('blurStrength').value)
+                    },
+                    shadow: {
+                        enabled: document.getElementById('shadowEnable').checked,
+                        type: document.getElementById('shadowType').value,
+                        color: document.getElementById('shadowColor').value,
+                        strength: parseInt(document.getElementById('shadowStrength').value)
+                    },
+                    hueRotate: {
+                        enabled: document.getElementById('hueEnable').checked,
+                        speed: parseInt(document.getElementById('hueSpeed').value)
+                    },
+                    rotate3d: {
+                        enabled: document.getElementById('rotate3dEnable').checked,
+                        axis: document.getElementById('rotate3dAxis').value,
+                        speed: parseInt(document.getElementById('rotate3dSpeed').value)
+                    },
+                    shake: {
+                        enabled: document.getElementById('shakeEnable').checked,
+                        strength: parseInt(document.getElementById('shakeStrength').value)
+                    }
+                },
+                size: parseInt(document.getElementById('size').value),
+                opacity: parseInt(document.getElementById('opacity').value)
+            };
+        }
+
+        // 即時更新預覽
+        function updatePreview() {
+            if (!currentImageData) return;
+
+            const config = getCurrentConfig();
+
+            // 設定圖片基本屬性
+            previewImg.src = config.image;
+            previewImg.style.width = config.size + '%';
+            previewImg.style.opacity = config.opacity / 100;
+
+            // 產生CSS動畫（簡化版，只處理主要移動模式）
+            generatePreviewAnimation(config);
+        }
+
+        // 產生預覽動畫CSS
+        function generatePreviewAnimation(config) {
+            // 清除舊動畫
+            previewImg.style.animation = 'none';
+            previewImg.style.transform = '';
+            previewImg.style.filter = '';
+            dynamicStyle.textContent = '';
+
+            const movement = config.movement;
+            const speed = 11 - movement.speed;
+            let css = '';
+            let animations = [];
+            let filters = [];
+
+            // 翻轉
+            let flipTransform = '';
+            if (config.flip === 'horizontal') flipTransform = 'scaleX(-1)';
+            else if (config.flip === 'vertical') flipTransform = 'scaleY(-1)';
+            else if (config.flip === 'both') flipTransform = 'scaleX(-1) scaleY(-1)';
+
+            // 移動模式
+            switch(movement.mode) {
+                case 'static':
+                    previewImg.style.left = '50%';
+                    previewImg.style.top = '50%';
+                    previewImg.style.transform = `translate(-50%, -50%) ${flipTransform}`;
+                    break;
+
+                case 'leftToRight':
+                    css += `@keyframes preview-leftToRight {
+                        from { left: -20%; }
+                        to { left: 120%; }
+                    }\n`;
+                    animations.push(`preview-leftToRight ${speed}s linear infinite`);
+                    previewImg.style.top = '50%';
+                    previewImg.style.transform = `translateY(-50%) ${flipTransform}`;
+                    break;
+
+                case 'rightToLeft':
+                    css += `@keyframes preview-rightToLeft {
+                        from { left: 120%; }
+                        to { left: -20%; }
+                    }\n`;
+                    animations.push(`preview-rightToLeft ${speed}s linear infinite`);
+                    previewImg.style.top = '50%';
+                    previewImg.style.transform = `translateY(-50%) ${flipTransform}`;
+                    break;
+
+                case 'horizontalLoop':
+                    css += `@keyframes preview-horizontalLoop {
+                        0% { left: -20%; }
+                        50% { left: 120%; }
+                        100% { left: -20%; }
+                    }\n`;
+                    animations.push(`preview-horizontalLoop ${speed * 2}s linear infinite`);
+                    previewImg.style.top = '50%';
+                    previewImg.style.transform = `translateY(-50%) ${flipTransform}`;
+                    break;
+
+                case 'topToBottom':
+                    css += `@keyframes preview-topToBottom {
+                        from { top: -20%; }
+                        to { top: 120%; }
+                    }\n`;
+                    animations.push(`preview-topToBottom ${speed}s linear infinite`);
+                    previewImg.style.left = '50%';
+                    previewImg.style.transform = `translateX(-50%) ${flipTransform}`;
+                    break;
+
+                case 'bottomToTop':
+                    css += `@keyframes preview-bottomToTop {
+                        from { top: 120%; }
+                        to { top: -20%; }
+                    }\n`;
+                    animations.push(`preview-bottomToTop ${speed}s linear infinite`);
+                    previewImg.style.left = '50%';
+                    previewImg.style.transform = `translateX(-50%) ${flipTransform}`;
+                    break;
+
+                case 'verticalLoop':
+                    css += `@keyframes preview-verticalLoop {
+                        0% { top: -20%; }
+                        50% { top: 120%; }
+                        100% { top: -20%; }
+                    }\n`;
+                    animations.push(`preview-verticalLoop ${speed * 2}s linear infinite`);
+                    previewImg.style.left = '50%';
+                    previewImg.style.transform = `translateX(-50%) ${flipTransform}`;
+                    break;
+
+                case 'diagonalTLBR':
+                    css += `@keyframes preview-diagonalTLBR {
+                        from { left: -20%; top: -20%; }
+                        to { left: 120%; top: 120%; }
+                    }\n`;
+                    animations.push(`preview-diagonalTLBR ${speed}s linear infinite`);
+                    previewImg.style.transform = flipTransform;
+                    break;
+
+                case 'diagonalTRBL':
+                    css += `@keyframes preview-diagonalTRBL {
+                        from { left: 120%; top: -20%; }
+                        to { left: -20%; top: 120%; }
+                    }\n`;
+                    animations.push(`preview-diagonalTRBL ${speed}s linear infinite`);
+                    previewImg.style.transform = flipTransform;
+                    break;
+
+                case 'diagonalBLTR':
+                    css += `@keyframes preview-diagonalBLTR {
+                        from { left: -20%; top: 120%; }
+                        to { left: 120%; top: -20%; }
+                    }\n`;
+                    animations.push(`preview-diagonalBLTR ${speed}s linear infinite`);
+                    previewImg.style.transform = flipTransform;
+                    break;
+
+                case 'diagonalBRTL':
+                    css += `@keyframes preview-diagonalBRTL {
+                        from { left: 120%; top: 120%; }
+                        to { left: -20%; top: -20%; }
+                    }\n`;
+                    animations.push(`preview-diagonalBRTL ${speed}s linear infinite`);
+                    previewImg.style.transform = flipTransform;
+                    break;
+
+                case 'circle':
+                    const radius = movement.circleRadius || 200;
+                    css += `@keyframes preview-circle {
+                        from { transform: translate(-50%, -50%) rotate(0deg) translateX(${radius}px) rotate(0deg) ${flipTransform}; }
+                        to { transform: translate(-50%, -50%) rotate(360deg) translateX(${radius}px) rotate(-360deg) ${flipTransform}; }
+                    }\n`;
+                    animations.push(`preview-circle ${speed}s linear infinite`);
+                    previewImg.style.left = '50%';
+                    previewImg.style.top = '50%';
+                    break;
+
+                case 'zigzag':
+                    css += `@keyframes preview-zigzag {
+                        0% { left: -20%; top: 20%; }
+                        25% { left: 30%; top: 80%; }
+                        50% { left: 50%; top: 20%; }
+                        75% { left: 80%; top: 80%; }
+                        100% { left: 120%; top: 20%; }
+                    }\n`;
+                    animations.push(`preview-zigzag ${speed}s linear infinite`);
+                    previewImg.style.transform = flipTransform;
+                    break;
+
+                case 'randomAppear':
+                    css += `@keyframes preview-randomAppear {
+                        0%, 100% { opacity: 0; }
+                        10%, 90% { opacity: ${config.opacity / 100}; }
+                    }\n`;
+                    animations.push(`preview-randomAppear ${speed}s infinite`);
+                    previewImg.style.left = '50%';
+                    previewImg.style.top = '50%';
+                    previewImg.style.transform = `translate(-50%, -50%) ${flipTransform}`;
+                    break;
+
+                case 'randomBounce':
+                    // 簡化為來回彈跳
+                    css += `@keyframes preview-randomBounce {
+                        0% { left: 10%; top: 10%; }
+                        25% { left: 80%; top: 70%; }
+                        50% { left: 20%; top: 80%; }
+                        75% { left: 70%; top: 20%; }
+                        100% { left: 10%; top: 10%; }
+                    }\n`;
+                    animations.push(`preview-randomBounce ${speed}s ease-in-out infinite`);
+                    previewImg.style.transform = flipTransform;
+                    break;
+
+                default:
+                    previewImg.style.left = '50%';
+                    previewImg.style.top = '50%';
+                    previewImg.style.transform = `translate(-50%, -50%) ${flipTransform}`;
+            }
+
+            // 特效動畫
+            const effects = config.effects;
+
+            // 旋轉
+            if (effects.rotate.enabled) {
+                const rotSpeed = 11 - effects.rotate.speed;
+                if (effects.rotate.mode === 'clockwise') {
+                    css += '@keyframes preview-rotate-cw { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }\n';
+                    animations.push(`preview-rotate-cw ${rotSpeed}s linear infinite`);
+                } else if (effects.rotate.mode === 'counterclockwise') {
+                    css += '@keyframes preview-rotate-ccw { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }\n';
+                    animations.push(`preview-rotate-ccw ${rotSpeed}s linear infinite`);
+                } else if (effects.rotate.mode === 'swing') {
+                    css += '@keyframes preview-rotate-swing { 0%, 100% { transform: rotate(-30deg); } 50% { transform: rotate(30deg); } }\n';
+                    animations.push(`preview-rotate-swing ${rotSpeed}s ease-in-out infinite`);
+                }
+            }
+
+            // 縮放脈動
+            if (effects.scale.enabled) {
+                const scaleSpeed = 3;
+                const scaleRange = effects.scale.range;
+                css += `@keyframes preview-scale-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(${scaleRange}); } }\n`;
+                animations.push(`preview-scale-pulse ${scaleSpeed}s ease-in-out infinite`);
+            }
+
+            // 扭曲
+            if (effects.skew.enabled) {
+                const skewStr = effects.skew.strength;
+                if (effects.skew.direction === 'horizontal') {
+                    css += `@keyframes preview-skew-h { 0%, 100% { transform: skewX(-${skewStr}deg); } 50% { transform: skewX(${skewStr}deg); } }\n`;
+                    animations.push(`preview-skew-h 3s ease-in-out infinite`);
+                } else {
+                    css += `@keyframes preview-skew-v { 0%, 100% { transform: skewY(-${skewStr}deg); } 50% { transform: skewY(${skewStr}deg); } }\n`;
+                    animations.push(`preview-skew-v 3s ease-in-out infinite`);
+                }
+            }
+
+            // 傾斜搖晃
+            if (effects.tilt.enabled) {
+                const tiltAngle = effects.tilt.angle;
+                if (effects.tilt.mode === 'swingLR') {
+                    css += `@keyframes preview-tilt-lr { 0%, 100% { transform: rotate(-${tiltAngle}deg); } 50% { transform: rotate(${tiltAngle}deg); } }\n`;
+                    animations.push(`preview-tilt-lr 2s ease-in-out infinite`);
+                } else {
+                    css += `@keyframes preview-tilt-ud { 0%, 100% { transform: rotateX(-${tiltAngle}deg); } 50% { transform: rotateX(${tiltAngle}deg); } }\n`;
+                    animations.push(`preview-tilt-ud 2s ease-in-out infinite`);
+                }
+            }
+
+            // 色相旋轉
+            if (effects.hueRotate.enabled) {
+                const hueSpeed = 11 - effects.hueRotate.speed;
+                css += '@keyframes preview-hue-rotate { from { filter: hue-rotate(0deg); } to { filter: hue-rotate(360deg); } }\n';
+                animations.push(`preview-hue-rotate ${hueSpeed}s linear infinite`);
+            }
+
+            // 3D旋轉
+            if (effects.rotate3d.enabled) {
+                const r3dSpeed = 11 - effects.rotate3d.speed;
+                const axis = effects.rotate3d.axis.toUpperCase();
+                css += `@keyframes preview-rotate3d-${axis} { from { transform: rotate${axis}(0deg); } to { transform: rotate${axis}(360deg); } }\n`;
+                animations.push(`preview-rotate3d-${axis} ${r3dSpeed}s linear infinite`);
+            }
+
+            // 抖動
+            if (effects.shake.enabled) {
+                const shakeStr = effects.shake.strength;
+                css += `@keyframes preview-shake {
+                    0%, 100% { transform: translate(0, 0); }
+                    10% { transform: translate(-${shakeStr}px, ${shakeStr}px); }
+                    20% { transform: translate(${shakeStr}px, -${shakeStr}px); }
+                    30% { transform: translate(-${shakeStr}px, -${shakeStr}px); }
+                    40% { transform: translate(${shakeStr}px, ${shakeStr}px); }
+                    50% { transform: translate(-${shakeStr}px, ${shakeStr}px); }
+                    60% { transform: translate(${shakeStr}px, -${shakeStr}px); }
+                    70% { transform: translate(-${shakeStr}px, -${shakeStr}px); }
+                    80% { transform: translate(${shakeStr}px, ${shakeStr}px); }
+                    90% { transform: translate(-${shakeStr}px, -${shakeStr}px); }
+                }\n`;
+                animations.push(`preview-shake 0.5s infinite`);
+            }
+
+            // 陰影/發光
+            if (effects.shadow.enabled) {
+                const shadowStr = effects.shadow.strength;
+                const shadowColor = effects.shadow.color;
+                if (effects.shadow.type === 'drop') {
+                    filters.push(`drop-shadow(${shadowStr}px ${shadowStr}px ${shadowStr}px ${shadowColor})`);
+                } else {
+                    filters.push(`drop-shadow(0 0 ${shadowStr}px ${shadowColor})`);
+                }
+            }
+
+            // 模糊
+            if (effects.blur.enabled && effects.blur.type === 'gaussian') {
+                filters.push(`blur(${effects.blur.strength}px)`);
+            }
+
+            // 套用
+            dynamicStyle.textContent = css;
+            if (animations.length > 0) {
+                previewImg.style.animation = animations.join(', ');
+            }
+            if (filters.length > 0) {
+                previewImg.style.filter = filters.join(' ');
+            }
+        }
 
         // 產生獨立 HTML 檔案
         function generateOutput() {

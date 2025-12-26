@@ -8,48 +8,60 @@
 
 ### ⭐⭐⭐ 高優先（建議優先實作）
 
-#### 1. 即時預覽功能 ❌ 無
-**現況**: 需產生檔案後才能預覽
+#### 1. 即時預覽功能 ✅ 已完成 (2025-12-26)
+**現況**: ~~需產生檔案後才能預覽~~ → **已實作左右分欄 + 即時預覽**
 **PhysicsGIF**: 即時 Canvas 預覽，調整參數立即顯示
 
-**建議**:
-- 改為左右分欄佈局（左側控制、右側預覽）
-- 使用 Canvas 即時渲染動畫效果
-- 參數變更時自動更新預覽
+**已實作** - 使用動態 DOM 預覽（保持 CSS 動畫輸出一致性）:
+- ✅ 改為左右分欄佈局（左側控制、右側預覽）
+- ✅ 右側使用 `<img>` + 動態產生 CSS 動畫
+- ✅ 參數變更時即時更新預覽區的 CSS
+- ✅ 所有14種移動模式完整預覽（左右、上下、對角線、圓周、之字形、彈跳等）
+- ✅ 所有9種視覺特效完整預覽（旋轉、縮放、扭曲、傾斜、模糊、陰影、色相、3D、抖動）
+- ✅ 實作 transform 效果互斥機制（避免 CSS 衝突）
+- ✅ 預覽區響應式調整（跟隨瀏覽器視窗大小）
+- ✅ 圖片大小不受限制（移除30%上限）
+- **❌ 不實作拖曳功能**（實際效用低，使用者可在 OBS 中直接調整位置）
 
 **技術方案**:
-```css
-body { display: flex; overflow: hidden; height: 100vh; }
-.sidebar { width: 480px; overflow-y: auto; }
-.main-area { flex: 1; display: flex; align-items: center; justify-content: center; }
+```html
+<!-- 左右分欄佈局 -->
+<div style="display: flex; height: 100vh;">
+    <div class="sidebar" style="width: 480px; overflow-y: auto;">
+        <!-- 設定表單 -->
+    </div>
+    <div class="preview-area" style="flex: 1; background: #252525;">
+        <div id="animationContainer" style="position: relative; width: 100%; height: 100%;">
+            <img id="previewImg" style="position: absolute;">
+        </div>
+    </div>
+</div>
 ```
 
----
-
-#### 2. 拖曳定位功能 ❌ 無
-**PhysicsGIF**: 滑鼠拖曳調整圖片位置 (line 878-902)
-**AnimationHTML**: 圖片位置固定
-
-**建議實作方式** - 偏移疊加（與 PhysicsGIF 一致）:
 ```javascript
-// 拖曳設定偏移量（適用所有移動模式）
-params.offsetX = dragX;
-params.offsetY = dragY;
+// 參數變更時動態更新預覽
+function updatePreview() {
+    const img = document.getElementById('previewImg');
+    const styleSheet = document.getElementById('dynamicStyle');
 
-// 不同模式套用方式
-// - 靜止: 直接設定位置
-// - 圓周: 圓心偏移
-// - 水平/垂直: 路徑偏移
+    // 根據設定動態產生 CSS 動畫
+    const css = generateAnimationCSS(currentParams);
+    styleSheet.textContent = css;
+
+    // 套用到預覽圖片
+    img.style.animation = generateAnimationString(currentParams);
+}
 ```
 
-**避免衝突**:
-- 所有移動模式基於「中心點偏移」
-- 在 Canvas 顯示十字標記指示中心
-- 靜止模式下效果最明顯（可加提示）
+**為什麼不實作拖曳定位**:
+1. **OBS 本身就能調整位置** - 使用者在 OBS 中拖曳「瀏覽器來源」更直覺
+2. **實作複雜度高** - 需處理拖曳與移動模式的衝突
+3. **實際效用低** - AnimationHTML 主要用於動態移動，靜態定位需求少
+4. **與輸出不一致** - 預覽中的位置與 OBS 實際顯示可能不同（螢幕尺寸差異）
 
 ---
 
-#### 3. 粒子系統 ❌ 無
+#### 2. 粒子系統 ❌ 無
 **PhysicsGIF**: 8種粒子（下雪、愛心、櫻花、螢火蟲、泡泡、星星、閃光、彩紙）
 
 **建議**:
@@ -159,8 +171,8 @@ image-rendering: pixelated;
 
 | 功能 | AnimationHTML | PhysicsGIF | 優先度 | 說明 |
 |------|--------------|-----------|--------|------|
-| **即時預覽** | ❌ | ✅ | ⭐⭐⭐ | 大幅提升體驗 |
-| **拖曳定位** | ❌ | ✅ | ⭐⭐⭐ | 實用且易理解 |
+| **即時預覽** | ✅ 已完成 | ✅ | ⭐⭐⭐ | 大幅提升體驗 |
+| **拖曳定位** | ❌ | ✅ | ❌ 不實作 | OBS 可調整，效用低 |
 | **粒子系統** | ❌ | ✅ 8種 | ⭐⭐⭐ | 增加視覺豐富度 |
 | **物理變形** | ❌ | ✅ 13種 | ⭐⭐ | CSS 可模擬部分 |
 | **濾鏡效果** | ⚠️ 6種 | ✅ 7種 | ⭐⭐ | 補充波浪/故障 |
@@ -238,67 +250,75 @@ canvas {
 
 ## 🔧 即時預覽實作邏輯
 
-### 方案: Canvas + requestAnimationFrame
+### 方案: 動態 DOM + CSS 動畫（與輸出一致）
 
 ```javascript
-const canvas = document.getElementById('previewCanvas');
-const ctx = canvas.getContext('2d');
-let animationId;
-let time = 0;
+// 全域狀態
+let previewImg = null;
+let dynamicStyleSheet = null;
 
-function loop() {
-    time += params.speed;
-    drawScene(time);
-    animationId = requestAnimationFrame(loop);
+// 初始化預覽
+function initPreview() {
+    previewImg = document.getElementById('previewImg');
+    dynamicStyleSheet = document.createElement('style');
+    dynamicStyleSheet.id = 'dynamicStyle';
+    document.head.appendChild(dynamicStyleSheet);
+
+    // 監聽所有參數變更
+    document.querySelectorAll('input, select').forEach(el => {
+        el.addEventListener('change', updatePreview);
+        el.addEventListener('input', updatePreview);
+    });
 }
 
-function drawScene(t) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+// 更新預覽
+function updatePreview() {
+    const config = getCurrentConfig(); // 取得目前所有設定
 
-    // 計算位置（中心點 + 偏移 + 移動）
-    const cx = canvas.width / 2 + params.offsetX;
-    const cy = canvas.height / 2 + params.offsetY;
+    // 設定圖片
+    previewImg.src = config.image;
+    previewImg.style.width = config.size + '%';
+    previewImg.style.opacity = config.opacity / 100;
 
-    // 套用移動模式
-    let motionX = 0, motionY = 0;
-    if (params.moveMode === 'leftToRight') {
-        motionX = (t % 100) * canvas.width / 100 - canvas.width / 2;
-    }
-    // ... 其他模式
+    // 產生 CSS 動畫（複用現有的 generateHTMLTemplate 邏輯）
+    const css = generateAnimationCSS(config);
+    dynamicStyleSheet.textContent = css;
 
-    ctx.save();
-    ctx.translate(cx + motionX, cy + motionY);
+    // 套用動畫
+    const animations = generateAnimationList(config);
+    previewImg.style.animation = animations.join(', ');
 
-    // 套用特效（旋轉、縮放等）
-    // ... 繪製圖片
+    // 套用濾鏡
+    const filters = generateFilterList(config);
+    previewImg.style.filter = filters.join(' ');
 
-    ctx.restore();
-
-    // 繪製中心點標記
-    drawCenterMarker(cx, cy);
+    // 套用翻轉
+    applyFlipTransform(config.flip);
 }
 
-function drawCenterMarker(cx, cy) {
-    ctx.strokeStyle = 'rgba(255, 235, 59, 0.5)';
-    ctx.setLineDash([5, 5]);
-    ctx.beginPath();
-    ctx.moveTo(cx - 15, cy);
-    ctx.lineTo(cx + 15, cy);
-    ctx.moveTo(cx, cy - 15);
-    ctx.lineTo(cx, cy + 15);
-    ctx.stroke();
-    ctx.setLineDash([]);
+// 產生動畫 CSS（從現有邏輯提取）
+function generateAnimationCSS(config) {
+    let css = '';
+    // ... 根據 config 產生 @keyframes
+    // 複用 getAnimationScript() 中的邏輯
+    return css;
 }
 ```
+
+**優點**:
+- ✅ 與最終輸出完全一致（都是 CSS 動畫）
+- ✅ 不需要重新實作動畫邏輯（複用現有程式碼）
+- ✅ 效能好（瀏覽器原生 CSS 動畫）
+- ✅ 即時更新（參數變更立即顯示）
 
 ---
 
 ## ⚠️ 技術限制與注意事項
 
-### 1. 拖曳定位的語意
-- ✅ 採用「中心點偏移」（與 PhysicsGIF 一致）
-- ✅ 適用所有移動模式
-- ⚠️ 部分全螢幕移動模式（對角線）效果不明顯
+### 1. 預覽與輸出的差異
+- ⚠️ 預覽區尺寸與 OBS 實際尺寸可能不同
+- ⚠️ 部分複雜動畫（randomBounce、circle 隨機中心）需重新載入才能完全重置
+- ✅ 使用相同的 CSS 動畫邏輯，確保一致性
 
 ### 2. 粒子系統的檔案大小
 - 粒子程式碼約 2-3KB（未壓縮）
@@ -310,39 +330,43 @@ function drawCenterMarker(cx, cy) {
 - 確保 OBS 瀏覽器來源支援
 - 故障效果可用純 CSS transform 替代
 
-### 4. Canvas vs CSS 動畫
-- Canvas 預覽：靈活、可即時調整
-- CSS 產生：效能佳、OBS 支援好
-- 需確保預覽與輸出一致
+### 4. 為什麼不使用 Canvas 預覽
+- ❌ 需要將 CSS 動畫邏輯轉換為 Canvas 繪製（重複實作）
+- ❌ Canvas 與最終 CSS 輸出不一致，可能產生差異
+- ✅ 使用動態 DOM + CSS 可直接複用現有程式碼
+- ✅ 預覽效果與最終輸出 100% 一致
 
 ---
 
 ## ✅ 實作步驟建議
 
-### 階段 1: 佈局改版
-1. 修改 CSS 為左右分欄
-2. 將控制項移至左側 sidebar
-3. 右側放置 Canvas 預覽區
+### 階段 1: 佈局改版（高優先）✅ 已完成 (2025-12-26)
+1. ✅ 修改 CSS 為左右分欄（flex 佈局）
+2. ✅ 將控制項移至左側 sidebar（480px 寬，可滾動）
+3. ✅ 右側放置預覽區（棋盤背景 + 動畫容器）
 
-### 階段 2: 即時預覽
-1. 新增 Canvas 元素
-2. 實作 drawScene() 渲染邏輯
-3. 監聽參數變更，自動更新預覽
+### 階段 2: 即時預覽（高優先）✅ 已完成 (2025-12-26)
+1. ✅ 新增預覽用 `<img>` 元素和動態 `<style>` 標籤
+2. ✅ 提取 CSS 產生邏輯為獨立函式
+3. ✅ 監聽所有 input/select 變更事件，呼叫 `updatePreview()`
+4. ✅ 實作所有14種移動模式與9種視覺特效預覽
+5. ✅ 實作 transform 效果互斥邏輯（避免 CSS 衝突）
 
-### 階段 3: 拖曳定位
-1. 新增 offsetX/offsetY 參數
-2. 實作 mousedown/move/up 事件
-3. 繪製中心點標記
+### 階段 3: 粒子系統（高優先）
+1. 新增粒子選項到「視覺特效」區塊（8種粒子）
+2. 實作粒子 CSS/JS 程式碼產生邏輯（參考 PhysicsGIF）
+3. 在產生 HTML 時嵌入選定的粒子程式碼
+4. 預覽區也要顯示粒子效果
 
-### 階段 4: 新增特效
-1. 粒子系統（8種）
-2. 濾鏡效果（波浪、故障等）
-3. 倒影/鏡像
+### 階段 4: 濾鏡擴充（中優先）
+1. 波浪效果（SVG filter 或 CSS skew 模擬）
+2. 故障特效（CSS transform + 動畫）
+3. 馬賽克效果（image-rendering: pixelated）
 
-### 階段 5: 產生邏輯更新
-1. 將預覽參數轉換為 CSS 動畫
-2. 嵌入粒子程式碼（若有使用）
-3. 套用偏移量到最終位置
+### 階段 5: 其他特效（低優先）
+1. 倒影效果（::after 偽元素 + scaleY(-1)）
+2. 鏡像效果（::after 偽元素 + scaleX(-1)）
+3. 物理變形效果（CSS 動畫模擬彈跳、果凍等）
 
 ---
 
