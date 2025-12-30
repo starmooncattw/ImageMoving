@@ -400,6 +400,35 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- 粒子特效 -->
+                <div class="effect-item" id="effect-particle">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="particleEnable">
+                        <label for="particleEnable" style="margin: 0; font-weight: bold;">粒子特效</label>
+                    </div>
+                    <div class="effect-controls">
+                        <div class="form-group">
+                            <label>粒子類型</label>
+                            <select id="particleType">
+                                <option value="snow">❄️ 下雪</option>
+                                <option value="rain">🌧️ 下雨</option>
+                                <option value="heart">❤️ 愛心</option>
+                                <option value="sakura">🌸 櫻花</option>
+                                <option value="firefly">✨ 螢火蟲</option>
+                                <option value="bubble">🫧 泡泡</option>
+                                <option value="star">⭐ 星星</option>
+                                <option value="sparkle">✨ 閃光</option>
+                                <option value="confetti">🎊 彩紙</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>速度</label>
+                            <input type="range" id="particleSpeed" min="0.01" max="0.5" step="0.01" value="0.1">
+                            <div class="range-label"><span>慢</span><span id="particleSpeedVal">0.1</span><span>快</span></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -433,8 +462,10 @@
     </div>
 
     <!-- 右側預覽區 -->
+    <!-- 右側預覽區 -->
     <div class="preview-area">
         <div id="animationContainer">
+            <canvas id="particleCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
             <img id="previewImg" alt="Preview">
         </div>
     </div>
@@ -445,8 +476,15 @@
 
     <script>
 
+        // 粒子系統變數
+        let particles = [];
+        let particleAnimationId = null;
+        const particleCanvas = document.getElementById('particleCanvas');
+        const particleCtx = particleCanvas.getContext('2d');
+
         // 初始化
-        const rangeInputs = ['speed', 'stayDuration', 'circleRadius', 'rotateSpeed', 'scaleRange', 'skewStrength', 'tiltAngle', 'blurStrength', 'shadowStrength', 'hueSpeed', 'rotate3dSpeed', 'shakeStrength', 'size', 'opacity'];
+        // 初始化
+        const rangeInputs = ['speed', 'stayDuration', 'circleRadius', 'rotateSpeed', 'scaleRange', 'skewStrength', 'tiltAngle', 'blurStrength', 'shadowStrength', 'hueSpeed', 'rotate3dSpeed', 'shakeStrength', 'particleSpeed', 'size', 'opacity'];
         rangeInputs.forEach(id => {
             const input = document.getElementById(id);
             const display = document.getElementById(id + 'Val');
@@ -473,11 +511,17 @@
         const nonTransformEffects = ['blur', 'shadow', 'hue'];
 
         // 特效開關
-        ['rotate', 'scale', 'skew', 'tilt', 'blur', 'shadow', 'hue', '3d', 'shake'].forEach(name => {
+        // 特效開關
+        ['rotate', 'scale', 'skew', 'tilt', 'blur', 'shadow', 'hue', '3d', 'shake', 'particle'].forEach(name => {
             const checkbox = document.getElementById(name === '3d' ? 'rotate3dEnable' : name + 'Enable');
             const item = document.getElementById('effect-' + name);
             checkbox.addEventListener('change', () => {
                 item.classList.toggle('enabled', checkbox.checked);
+
+                // 粒子系統特殊處理
+                if (name === 'particle') {
+                    updateParticleSystem();
+                }
 
                 // 如果是 transform 相關特效，處理互斥邏輯
                 if (transformEffects.includes(name)) {
@@ -694,65 +738,181 @@
                     break;
 
                 case 'leftToRight':
+                    const ltrPos = document.querySelector('input[name="horizontalPosition"]:checked')?.value || 'middle';
+                    const ltrTopPos = ltrPos === 'top' ? '10%' : ltrPos === 'bottom' ? '90%' : ltrPos === 'random' ? (Math.random() * 80 + 10) + '%' : '50%';
                     css += `@keyframes preview-leftToRight {
                         from { left: -20%; }
                         to { left: 120%; }
                     }\n`;
                     animations.push(`preview-leftToRight ${speed}s linear infinite`);
-                    previewImg.style.top = '50%';
+                    previewImg.style.top = ltrTopPos;
                     previewImg.style.transform = `translateY(-50%) ${flipTransform}`;
                     break;
 
                 case 'rightToLeft':
+                    const rtlPos = document.querySelector('input[name="horizontalPosition"]:checked')?.value || 'middle';
+                    const rtlTopPos = rtlPos === 'top' ? '10%' : rtlPos === 'bottom' ? '90%' : rtlPos === 'random' ? (Math.random() * 80 + 10) + '%' : '50%';
                     css += `@keyframes preview-rightToLeft {
                         from { left: 120%; }
                         to { left: -20%; }
                     }\n`;
                     animations.push(`preview-rightToLeft ${speed}s linear infinite`);
-                    previewImg.style.top = '50%';
+                    previewImg.style.top = rtlTopPos;
                     previewImg.style.transform = `translateY(-50%) ${flipTransform}`;
                     break;
 
                 case 'horizontalLoop':
-                    css += `@keyframes preview-horizontalLoop {
-                        0% { left: -20%; }
-                        50% { left: 120%; }
-                        100% { left: -20%; }
-                    }\n`;
-                    animations.push(`preview-horizontalLoop ${speed * 2}s linear infinite`);
-                    previewImg.style.top = '50%';
-                    previewImg.style.transform = `translateY(-50%) ${flipTransform}`;
+                    // 停止任何現有的來回動畫
+                    if (window.previewLoopInterval) {
+                        clearInterval(window.previewLoopInterval);
+                    }
+                    
+                    const hLoopPos = document.querySelector('input[name="horizontalLoopPosition"]:checked')?.value || 'middle';
+                    const hLoopStart = document.querySelector('input[name="horizontalLoopStart"]:checked')?.value || 'left';
+                    const startPos = hLoopStart === 'left' ? -20 : 120;
+                    const endPos = hLoopStart === 'left' ? 120 : -20;
+                    
+                    function getHLoopTop() {
+                        if (hLoopPos === 'random') return (Math.random() * 80 + 10) + '%';
+                        return hLoopPos === 'top' ? '10%' : hLoopPos === 'bottom' ? '90%' : '50%';
+                    }
+                    
+                    const totalDuration = speed * 2000; // 來回總時間
+                    let currentFlipX = 1;
+                    let isMovingForward = true;
+                    
+                    previewImg.style.top = getHLoopTop();
+                    previewImg.style.left = startPos + '%';
+                    previewImg.style.transition = 'none';
+                    
+                    function animateHLoop() {
+                        if (isMovingForward) {
+                            previewImg.style.left = startPos + '%';
+                            previewImg.style.top = getHLoopTop();
+                            previewImg.style.transform = `translateY(-50%) scaleX(${currentFlipX}) ${flipTransform}`;
+                            
+                            setTimeout(() => {
+                                previewImg.style.transition = `left ${totalDuration/2}ms linear`;
+                                previewImg.style.left = endPos + '%';
+                            }, 50);
+                            
+                            window.previewLoopInterval = setTimeout(() => {
+                                currentFlipX = -1;
+                                previewImg.style.transition = 'none';
+                                previewImg.style.transform = `translateY(-50%) scaleX(${currentFlipX}) ${flipTransform}`;
+                                isMovingForward = false;
+                                setTimeout(animateHLoop, 50);
+                            }, totalDuration/2);
+                        } else {
+                            previewImg.style.left = endPos + '%';
+                            previewImg.style.top = getHLoopTop();
+                            previewImg.style.transform = `translateY(-50%) scaleX(${currentFlipX}) ${flipTransform}`;
+                            
+                            setTimeout(() => {
+                                previewImg.style.transition = `left ${totalDuration/2}ms linear`;
+                                previewImg.style.left = startPos + '%';
+                            }, 50);
+                            
+                            window.previewLoopInterval = setTimeout(() => {
+                                currentFlipX = 1;
+                                previewImg.style.transition = 'none';
+                                previewImg.style.transform = `translateY(-50%) scaleX(${currentFlipX}) ${flipTransform}`;
+                                isMovingForward = true;
+                                setTimeout(animateHLoop, 50);
+                            }, totalDuration/2);
+                        }
+                    }
+                    
+                    animateHLoop();
                     break;
 
                 case 'topToBottom':
+                    const ttbPos = document.querySelector('input[name="verticalPosition"]:checked')?.value || 'center';
+                    const ttbLeftPos = ttbPos === 'left' ? '10%' : ttbPos === 'right' ? '90%' : ttbPos === 'random' ? (Math.random() * 80 + 10) + '%' : '50%';
                     css += `@keyframes preview-topToBottom {
                         from { top: -20%; }
                         to { top: 120%; }
                     }\n`;
                     animations.push(`preview-topToBottom ${speed}s linear infinite`);
-                    previewImg.style.left = '50%';
+                    previewImg.style.left = ttbLeftPos;
                     previewImg.style.transform = `translateX(-50%) ${flipTransform}`;
                     break;
 
                 case 'bottomToTop':
+                    const bttPos = document.querySelector('input[name="verticalPosition"]:checked')?.value || 'center';
+                    const bttLeftPos = bttPos === 'left' ? '10%' : bttPos === 'right' ? '90%' : bttPos === 'random' ? (Math.random() * 80 + 10) + '%' : '50%';
                     css += `@keyframes preview-bottomToTop {
                         from { top: 120%; }
                         to { top: -20%; }
                     }\n`;
                     animations.push(`preview-bottomToTop ${speed}s linear infinite`);
-                    previewImg.style.left = '50%';
+                    previewImg.style.left = bttLeftPos;
                     previewImg.style.transform = `translateX(-50%) ${flipTransform}`;
                     break;
 
                 case 'verticalLoop':
-                    css += `@keyframes preview-verticalLoop {
-                        0% { top: -20%; }
-                        50% { top: 120%; }
-                        100% { top: -20%; }
-                    }\n`;
-                    animations.push(`preview-verticalLoop ${speed * 2}s linear infinite`);
-                    previewImg.style.left = '50%';
-                    previewImg.style.transform = `translateX(-50%) ${flipTransform}`;
+                    // 停止任何現有的來回動畫
+                    if (window.previewLoopInterval) {
+                        clearInterval(window.previewLoopInterval);
+                    }
+                    
+                    const vLoopPos = document.querySelector('input[name="verticalLoopPosition"]:checked')?.value || 'center';
+                    const vLoopStart = document.querySelector('input[name="verticalLoopStart"]:checked')?.value || 'top';
+                    const vStartPos = vLoopStart === 'top' ? -20 : 120;
+                    const vEndPos = vLoopStart === 'top' ? 120 : -20;
+                    
+                    function getVLoopLeft() {
+                        if (vLoopPos === 'random') return (Math.random() * 80 + 10) + '%';
+                        return vLoopPos === 'left' ? '10%' : vLoopPos === 'right' ? '90%' : '50%';
+                    }
+                    
+                    const vTotalDuration = speed * 2000; // 來回總時間
+                    let currentFlipY = 1;
+                    let isMovingDown = vLoopStart === 'top';
+                    
+                    previewImg.style.left = getVLoopLeft();
+                    previewImg.style.top = vStartPos + '%';
+                    previewImg.style.transition = 'none';
+                    
+                    function animateVLoop() {
+                        if ((vLoopStart === 'top' && isMovingDown) || (vLoopStart === 'bottom' && !isMovingDown)) {
+                            previewImg.style.top = vStartPos + '%';
+                            previewImg.style.left = getVLoopLeft();
+                            previewImg.style.transform = `translateX(-50%) scaleY(${currentFlipY}) ${flipTransform}`;
+                            
+                            setTimeout(() => {
+                                previewImg.style.transition = `top ${vTotalDuration/2}ms linear`;
+                                previewImg.style.top = vEndPos + '%';
+                            }, 50);
+                            
+                            window.previewLoopInterval = setTimeout(() => {
+                                currentFlipY = -1;
+                                previewImg.style.transition = 'none';
+                                previewImg.style.transform = `translateX(-50%) scaleY(${currentFlipY}) ${flipTransform}`;
+                                isMovingDown = !isMovingDown;
+                                setTimeout(animateVLoop, 50);
+                            }, vTotalDuration/2);
+                        } else {
+                            previewImg.style.top = vEndPos + '%';
+                            previewImg.style.left = getVLoopLeft();
+                            previewImg.style.transform = `translateX(-50%) scaleY(${currentFlipY}) ${flipTransform}`;
+                            
+                            setTimeout(() => {
+                                previewImg.style.transition = `top ${vTotalDuration/2}ms linear`;
+                                previewImg.style.top = vStartPos + '%';
+                            }, 50);
+                            
+                            window.previewLoopInterval = setTimeout(() => {
+                                currentFlipY = 1;
+                                previewImg.style.transition = 'none';
+                                previewImg.style.transform = `translateX(-50%) scaleY(${currentFlipY}) ${flipTransform}`;
+                                isMovingDown = !isMovingDown;
+                                setTimeout(animateVLoop, 50);
+                            }, vTotalDuration/2);
+                        }
+                    }
+                    
+                    animateVLoop();
                     break;
 
                 case 'diagonalTLBR':
@@ -1037,6 +1197,11 @@
                     shake: {
                         enabled: document.getElementById('shakeEnable').checked,
                         strength: parseInt(document.getElementById('shakeStrength').value)
+},
+                    particle: {
+                        enabled: document.getElementById('particleEnable').checked,
+                        type: document.getElementById('particleType').value,
+                        speed: parseFloat(document.getElementById('particleSpeed').value)
                     }
                 },
                 size: parseInt(document.getElementById('size').value),
@@ -1067,6 +1232,7 @@
         function generateHTMLTemplate(config) {
             const configJSON = JSON.stringify(config);
             const scriptContent = getAnimationScript();
+            const particleScript = getParticleScript(config);  // 加入這行
 
             return '<!DOCTYPE html>\n' +
 '<html lang="zh-TW">\n' +
@@ -1091,10 +1257,12 @@
 '    </style>\n' +
 '</head>\n' +
 '<body>\n' +
-'    <img id="animatedImage" alt="animated">\n' +
+'    <canvas id="particleCanvas" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 1;"></canvas>\n' +
+'    <img id="animatedImage" alt="animated" style="position: relative; z-index: 2;">\n' +
 '    <scr' + 'ipt>\n' +
 '        const config = ' + configJSON + ';\n' +
 '        ' + scriptContent + '\n' +
+'        ' + particleScript + '\n' +
 '    </scr' + 'ipt>\n' +
 '</body>\n' +
 '</html>';
@@ -1133,13 +1301,13 @@
         const vPos = movement.verticalPosition || 'center';
 
         const horizontalTop = {
-            top: hPos === 'top' ? '0%' : (hPos === 'middle' ? '50%' : '100%'),
-            transform: hPos === 'top' ? 'translateY(0%)' : (hPos === 'middle' ? 'translateY(-50%)' : 'translateY(-100%)')
+            top: hPos === 'top' ? '0%' : (hPos === 'middle' ? '50%' : (hPos === 'random' ? (Math.random() * 80 + 10) + '%' : '100%')),
+            transform: hPos === 'top' ? 'translateY(0%)' : (hPos === 'middle' ? 'translateY(-50%)' : (hPos === 'random' ? 'translateY(-50%)' : 'translateY(-100%)'))
         };
 
         const verticalLeft = {
-            left: vPos === 'left' ? '0%' : (vPos === 'center' ? '50%' : '100%'),
-            transform: vPos === 'left' ? 'translateX(0%)' : (vPos === 'center' ? 'translateX(-50%)' : 'translateX(-100%)')
+            left: vPos === 'left' ? '0%' : (vPos === 'center' ? '50%' : (vPos === 'random' ? (Math.random() * 80 + 10) + '%' : '100%')),
+            transform: vPos === 'left' ? 'translateX(0%)' : (vPos === 'center' ? 'translateX(-50%)' : (vPos === 'random' ? 'translateX(-50%)' : 'translateX(-100%)'))
         };
 
         let movementKeyframes = '';
@@ -1636,6 +1804,198 @@
             return func.toString() + '\ninitAnimation(config);';
         }
 
+        // 取得粒子系統腳本
+        function getParticleScript(config) {
+            if (!config.effects.particle || !config.effects.particle.enabled) return '';
+            
+            return `
+if (config.effects.particle.enabled) {
+    const canvas = document.getElementById('particleCanvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    const type = config.effects.particle.type;
+    const speed = config.effects.particle.speed;
+    const count = type === 'sparkle' ? 30 : (type === 'confetti' ? 150 : (type === 'rain' ? 100 : 15));
+    const useGrid = ['heart', 'star', 'sparkle'].includes(type);
+    
+    // 初始化粒子
+    if (useGrid) {
+        const cols = Math.ceil(Math.sqrt(count * (canvas.width / canvas.height)));
+        const rows = Math.ceil(count / cols);
+        const cellW = canvas.width / cols;
+        const cellH = canvas.height / rows;
+        let idx = 0;
+        for(let row = 0; row < rows && idx < count; row++) {
+            for(let col = 0; col < cols && idx < count; col++) {
+                const offsetX = (Math.random() - 0.5) * cellW * 0.6;
+                const offsetY = (Math.random() - 0.5) * cellH * 0.6;
+                particles.push({
+                    startX: col * cellW + cellW / 2 + offsetX,
+                    startY: row * cellH + cellH / 2 + offsetY,
+                    s: Math.random()*0.5+0.6,
+                    v: Math.random()*2+1,
+                    o: Math.random()*Math.PI*2,
+                    vx: (Math.random()-0.5)*2,
+                    rotSpeed: (Math.random()-0.5)*5,
+                    color: 'hsl(' + Math.floor(Math.random()*360) + ', 70%, 60%)',
+                    offset: Math.random() * 1000
+                });
+                idx++;
+            }
+        }
+    } else {
+        for(let i=0; i<count; i++) {
+            particles.push({
+                startX: Math.random()*canvas.width,
+                startY: Math.random()*canvas.height,
+                s: Math.random()*0.5+0.5,
+                v: Math.random()*2+1,
+                o: Math.random()*Math.PI*2,
+                vx: (Math.random()-0.5)*2,
+                rotSpeed: (Math.random()-0.5)*5,
+                color: 'hsl(' + Math.floor(Math.random()*360) + ', 70%, 60%)',
+                offset: Math.random() * 1000
+            });
+        }
+    }
+    
+    // 繪製粒子
+    function drawParticles() {
+        const currentTime = Date.now() * 0.001;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.save();
+        
+        particles.forEach(function(p) {
+            const t = (currentTime * speed * 100) + p.offset;
+            let x, y, rot;
+            const cycleHeight = canvas.height + 60;
+            const cycleWidth = canvas.width + 60;
+            
+            // 計算位置
+            if (type === 'bubble') {
+                const movement = (t * p.v * 0.5) % cycleHeight;
+                y = (p.startY - movement + cycleHeight) % cycleHeight - 30;
+                x = p.startX + Math.sin(t * 0.05 + p.o) * 30;
+                x = ((x % cycleWidth) + cycleWidth) % cycleWidth - 30;
+            } else if (type === 'sakura') {
+                const movement = (t * p.v * 0.8) % cycleHeight;
+                y = (p.startY + movement) % cycleHeight - 30;
+                x = p.startX + Math.sin(t * 0.03 + p.o) * 50;
+                x = ((x % cycleWidth) + cycleWidth) % cycleWidth - 30;
+                rot = t * p.rotSpeed;
+            } else if (type === 'firefly') {
+                y = canvas.height / 2 + Math.sin(t * 0.05 + p.o) * (canvas.height * 0.4);
+                x = canvas.width / 2 + Math.cos(t * 0.05 + p.o) * (canvas.width * 0.4);
+            } else if (type === 'confetti') {
+                const movement = (t * p.v) % cycleHeight;
+                y = (p.startY + movement) % cycleHeight - 30;
+                const xMovement = (t * p.vx) % cycleWidth;
+                x = (p.startX + xMovement + cycleWidth) % cycleWidth - 30;
+                rot = t * p.rotSpeed;
+            } else if (['heart', 'star', 'sparkle'].indexOf(type) !== -1) {
+                x = p.startX;
+                y = p.startY;
+            } else if (type === 'rain') {
+                const movement = (t * p.v * 3) % cycleHeight;
+                y = (p.startY + movement) % cycleHeight - 30;
+                x = p.startX + movement * 0.3;
+                x = ((x % cycleWidth) + cycleWidth) % cycleWidth - 30;
+            } else {
+                const movement = (t * p.v) % cycleHeight;
+                y = (p.startY + movement) % cycleHeight - 30;
+                x = p.startX;
+            }
+            
+            ctx.save();
+            ctx.translate(x, y);
+            if (type === 'sakura' || type === 'confetti') {
+                ctx.rotate(rot * Math.PI / 180);
+            }
+            
+            // 縮放
+            if (['heart', 'star', 'sparkle'].indexOf(type) !== -1) {
+                const pulseScale = p.s * (0.8 + Math.abs(Math.sin(t * 0.1 + p.o)) * 0.5);
+                ctx.scale(pulseScale, pulseScale);
+            } else {
+                ctx.scale(p.s, p.s);
+            }
+            
+            // 繪製
+            if (type === 'snow') {
+                ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                ctx.beginPath();
+                ctx.arc(0, 0, 5, 0, Math.PI*2);
+                ctx.fill();
+            } else if (type === 'rain') {
+                ctx.strokeStyle = 'rgba(100, 150, 255, 0.6)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, -10);
+                ctx.lineTo(3, 10);
+                ctx.stroke();
+            } else if (type === 'heart') {
+                ctx.fillStyle = 'rgba(255, 50, 50, 0.9)';
+                ctx.font = "30px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText("❤", 0, 0);
+            } else if (type === 'star') {
+                ctx.fillStyle = 'rgba(255, 255, 100, ' + Math.abs(Math.sin(currentTime*0.1+p.o)) + ')';
+                ctx.beginPath();
+                ctx.arc(0, 0, 4, 0, Math.PI*2);
+                ctx.fill();
+            } else if (type === 'bubble') {
+                ctx.strokeStyle = 'rgba(100, 200, 255, 0.6)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, 8, 0, Math.PI*2);
+                ctx.stroke();
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.fill();
+            } else if (type === 'sakura') {
+                ctx.fillStyle = 'rgba(255, 182, 193, 0.8)';
+                ctx.font = "25px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText("🌸", 0, 0);
+            } else if (type === 'sparkle') {
+                const alpha = Math.abs(Math.sin(currentTime*0.15+p.o));
+                ctx.fillStyle = 'rgba(255, 255, 255, ' + alpha + ')';
+                ctx.beginPath();
+                ctx.moveTo(0, -6);
+                ctx.lineTo(0, 6);
+                ctx.moveTo(-6, 0);
+                ctx.lineTo(6, 0);
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = 'rgba(255, 255, 255, ' + alpha + ')';
+                ctx.stroke();
+            } else if (type === 'firefly') {
+                const alpha = Math.abs(Math.sin(currentTime*0.2+p.o));
+                ctx.fillStyle = 'rgba(255, 255, 100, ' + alpha + ')';
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = 'rgba(255, 255, 100, ' + alpha + ')';
+                ctx.beginPath();
+                ctx.arc(0, 0, 3, 0, Math.PI*2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            } else if (type === 'confetti') {
+                ctx.fillStyle = p.color;
+                ctx.fillRect(-4, -8, 8, 16);
+            }
+            
+            ctx.restore();
+        });
+        
+        ctx.restore();
+        requestAnimationFrame(drawParticles);
+    }
+    
+    drawParticles();
+}
+`;
+        }
+
         // 載入設定並回填表單
         function loadConfig(config) {
             // 載入圖片
@@ -1934,6 +2294,242 @@
 
             alert('範本已套用！');
         }
+
+// 粒子系統核心函式
+
+// 調整 Canvas 尺寸
+function resizeParticleCanvas() {
+    const container = document.getElementById('animationContainer');
+    particleCanvas.width = container.offsetWidth;
+    particleCanvas.height = container.offsetHeight;
+}
+
+// 初始化粒子
+function initParticles() {
+    particles = [];
+    const type = document.getElementById('particleType').value;
+    const count = type === 'sparkle' ? 30 : (type === 'confetti' ? 150 : 15);
+    const useGrid = ['heart', 'star', 'sparkle'].includes(type);
+
+    if (useGrid) {
+        // 固定位置粒子使用網格分布
+        const cols = Math.ceil(Math.sqrt(count * (particleCanvas.width / particleCanvas.height)));
+        const rows = Math.ceil(count / cols);
+        const cellW = particleCanvas.width / cols;
+        const cellH = particleCanvas.height / rows;
+
+        let idx = 0;
+        for(let row = 0; row < rows && idx < count; row++) {
+            for(let col = 0; col < cols && idx < count; col++) {
+                const offsetX = (Math.random() - 0.5) * cellW * 0.6;
+                const offsetY = (Math.random() - 0.5) * cellH * 0.6;
+
+                particles.push({
+                    startX: col * cellW + cellW / 2 + offsetX,
+                    startY: row * cellH + cellH / 2 + offsetY,
+                    s: Math.random()*0.5+0.6,
+                    v: Math.random()*2+1,
+                    o: Math.random()*Math.PI*2,
+                    vx: (Math.random()-0.5)*2,
+                    rotSpeed: (Math.random()-0.5)*5,
+                    color: `hsl(${Math.random()*360}, 70%, 60%)`,
+                    offset: Math.random() * 1000
+                });
+                idx++;
+            }
+        }
+    } else {
+        // 移動粒子使用隨機分布
+        for(let i=0; i<count; i++) {
+            particles.push({
+                startX: Math.random()*particleCanvas.width,
+                startY: Math.random()*particleCanvas.height,
+                s: Math.random()*0.5+0.5,
+                v: Math.random()*2+1,
+                o: Math.random()*Math.PI*2,
+                vx: (Math.random()-0.5)*2,
+                rotSpeed: (Math.random()-0.5)*5,
+                color: `hsl(${Math.random()*360}, 70%, 60%)`,
+                offset: Math.random() * 1000
+            });
+        }
+    }
+}
+
+// 繪製粒子
+function drawParticles(currentTime) {
+    const type = document.getElementById('particleType').value;
+    const speed = parseFloat(document.getElementById('particleSpeed').value);
+
+    particleCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+    particleCtx.save();
+
+    particles.forEach(p => {
+        const t = (currentTime * speed * 100) + p.offset;
+        let x, y, rot;
+
+        const cycleHeight = particleCanvas.height + 60;
+        const cycleWidth = particleCanvas.width + 60;
+
+        // 計算粒子位置
+        if (type === 'bubble') {
+            const movement = (t * p.v * 0.5) % cycleHeight;
+            y = (p.startY - movement + cycleHeight) % cycleHeight - 30;
+            x = p.startX + Math.sin(t * 0.05 + p.o) * 30;
+            x = ((x % cycleWidth) + cycleWidth) % cycleWidth - 30;
+        } else if (type === 'sakura') {
+            const movement = (t * p.v * 0.8) % cycleHeight;
+            y = (p.startY + movement) % cycleHeight - 30;
+            x = p.startX + Math.sin(t * 0.03 + p.o) * 50;
+            x = ((x % cycleWidth) + cycleWidth) % cycleWidth - 30;
+            rot = t * p.rotSpeed;
+        } else if (type === 'firefly') {
+            y = particleCanvas.height / 2 + Math.sin(t * 0.05 + p.o) * (particleCanvas.height * 0.4);
+            x = particleCanvas.width / 2 + Math.cos(t * 0.05 + p.o) * (particleCanvas.width * 0.4);
+        } else if (type === 'confetti') {
+            const movement = (t * p.v) % cycleHeight;
+            y = (p.startY + movement) % cycleHeight - 30;
+            const xMovement = (t * p.vx) % cycleWidth;
+            x = (p.startX + xMovement + cycleWidth) % cycleWidth - 30;
+            rot = t * p.rotSpeed;
+        } else if (['heart', 'star', 'sparkle'].includes(type)) {
+            x = p.startX;
+            y = p.startY;
+        } else if (type === 'rain') {
+            // 雨滴：快速斜向下落
+            const movement = (t * p.v * 3) % cycleHeight;
+            y = (p.startY + movement) % cycleHeight - 30;
+            x = p.startX + movement * 0.3;
+            x = ((x % cycleWidth) + cycleWidth) % cycleWidth - 30;
+        } else {
+            // snow
+            const movement = (t * p.v) % cycleHeight;
+            y = (p.startY + movement) % cycleHeight - 30;
+            x = p.startX;
+        }
+
+        particleCtx.save();
+        particleCtx.translate(x, y);
+        if (type === 'sakura' || type === 'confetti') {
+            particleCtx.rotate(rot * Math.PI / 180);
+        }
+
+        // 縮放
+        if (['heart', 'star', 'sparkle'].includes(type)) {
+            const pulseScale = p.s * (0.8 + Math.abs(Math.sin(t * 0.1 + p.o)) * 0.5);
+            particleCtx.scale(pulseScale, pulseScale);
+        } else {
+            particleCtx.scale(p.s, p.s);
+        }
+
+        // 繪製不同粒子
+        if (type === 'snow') {
+            particleCtx.fillStyle = 'rgba(255,255,255,0.8)';
+            particleCtx.beginPath();
+            particleCtx.arc(0, 0, 5, 0, Math.PI*2);
+            particleCtx.fill();
+        } else if (type === 'rain') {
+            particleCtx.strokeStyle = 'rgba(100, 150, 255, 0.6)';
+            particleCtx.lineWidth = 2;
+            particleCtx.beginPath();
+            particleCtx.moveTo(0, -10);
+            particleCtx.lineTo(3, 10);
+            particleCtx.stroke();
+        } else if (type === 'heart') {
+            particleCtx.fillStyle = `rgba(255, 50, 50, 0.9)`;
+            particleCtx.font = "30px Arial";
+            particleCtx.textAlign = "center";
+            particleCtx.fillText("❤", 0, 0);
+        } else if (type === 'star') {
+            particleCtx.fillStyle = `rgba(255, 255, 100, ${Math.abs(Math.sin(currentTime*0.1+p.o))})`;
+            particleCtx.beginPath();
+            particleCtx.arc(0, 0, 4, 0, Math.PI*2);
+            particleCtx.fill();
+        } else if (type === 'bubble') {
+            particleCtx.strokeStyle = `rgba(100, 200, 255, 0.6)`;
+            particleCtx.lineWidth = 2;
+            particleCtx.beginPath();
+            particleCtx.arc(0, 0, 8, 0, Math.PI*2);
+            particleCtx.stroke();
+            particleCtx.fillStyle = `rgba(255, 255, 255, 0.2)`;
+            particleCtx.fill();
+        } else if (type === 'sakura') {
+            particleCtx.fillStyle = `rgba(255, 182, 193, 0.8)`;
+            particleCtx.font = "25px Arial";
+            particleCtx.textAlign = "center";
+            particleCtx.fillText("🌸", 0, 0);
+        } else if (type === 'sparkle') {
+            const alpha = Math.abs(Math.sin(currentTime*0.15+p.o));
+            particleCtx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+            particleCtx.beginPath();
+            particleCtx.moveTo(0, -6);
+            particleCtx.lineTo(0, 6);
+            particleCtx.moveTo(-6, 0);
+            particleCtx.lineTo(6, 0);
+            particleCtx.lineWidth = 2;
+            particleCtx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+            particleCtx.stroke();
+        } else if (type === 'firefly') {
+            const alpha = Math.abs(Math.sin(currentTime*0.2+p.o));
+            particleCtx.fillStyle = `rgba(255, 255, 100, ${alpha})`;
+            particleCtx.shadowBlur = 15;
+            particleCtx.shadowColor = `rgba(255, 255, 100, ${alpha})`;
+            particleCtx.beginPath();
+            particleCtx.arc(0, 0, 3, 0, Math.PI*2);
+            particleCtx.fill();
+            particleCtx.shadowBlur = 0;
+        } else if (type === 'confetti') {
+            particleCtx.fillStyle = p.color;
+            particleCtx.fillRect(-4, -8, 8, 16);
+        }
+
+        particleCtx.restore();
+    });
+
+    particleCtx.restore();
+}
+
+// 粒子動畫循環
+function animateParticles() {
+    const currentTime = Date.now() * 0.001;
+    drawParticles(currentTime);
+    particleAnimationId = requestAnimationFrame(animateParticles);
+}
+
+// 啟動/停止粒子系統
+function updateParticleSystem() {
+    const enabled = document.getElementById('particleEnable').checked;
+    
+    if (enabled) {
+        resizeParticleCanvas();
+        initParticles();
+        if (!particleAnimationId) {
+            animateParticles();
+        }
+    } else {
+        if (particleAnimationId) {
+            cancelAnimationFrame(particleAnimationId);
+            particleAnimationId = null;
+        }
+        particleCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+        particles = [];
+    }
+}
+
+// 視窗大小變更時重新初始化
+window.addEventListener('resize', () => {
+    if (document.getElementById('particleEnable').checked) {
+        resizeParticleCanvas();
+        initParticles();
+    }
+});
+
+// 粒子類型或速度變更時重新初始化
+document.getElementById('particleType').addEventListener('change', () => {
+    if (document.getElementById('particleEnable').checked) {
+        initParticles();
+    }
+});
     </script>
 </body>
 </html>
