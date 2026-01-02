@@ -429,6 +429,38 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- 倒影效果 -->
+                <div class="effect-item" id="effect-reflection">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="reflectionEnable">
+                        <label for="reflectionEnable" style="margin: 0; font-weight: bold;">💧 倒影（水面）</label>
+                    </div>
+                    <div class="effect-controls">
+                        <div class="form-group">
+                            <label>倒影間距 <span id="reflectionGapVal">0</span>px</label>
+                            <input type="range" id="reflectionGap" min="-100" max="100" value="0">
+                            <div class="range-label"><span>-100px</span><span>0</span><span>+100px</span></div>
+                            <small style="color: #888;">負值：縮小間距；正值：增加間距</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 鏡像效果 -->
+                <div class="effect-item" id="effect-mirror">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="mirrorEnable">
+                        <label for="mirrorEnable" style="margin: 0; font-weight: bold;">👥 鏡像（雙人）</label>
+                    </div>
+                    <div class="effect-controls">
+                        <div class="form-group">
+                            <label>鏡像間距 <span id="mirrorGapVal">20</span>%</label>
+                            <input type="range" id="mirrorGap" min="0" max="50" value="20">
+                            <div class="range-label"><span>0%</span><span>20%</span><span>50%</span></div>
+                            <small style="color: #888;">左右分離距離（畫面寬度百分比）</small>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -484,7 +516,7 @@
 
         // 初始化
         // 初始化
-        const rangeInputs = ['speed', 'stayDuration', 'circleRadius', 'rotateSpeed', 'scaleRange', 'skewStrength', 'tiltAngle', 'blurStrength', 'shadowStrength', 'hueSpeed', 'rotate3dSpeed', 'shakeStrength', 'particleSpeed', 'size', 'opacity'];
+        const rangeInputs = ['speed', 'stayDuration', 'circleRadius', 'rotateSpeed', 'scaleRange', 'skewStrength', 'tiltAngle', 'blurStrength', 'shadowStrength', 'hueSpeed', 'rotate3dSpeed', 'shakeStrength', 'particleSpeed', 'reflectionGap', 'mirrorGap', 'size', 'opacity'];
         rangeInputs.forEach(id => {
             const input = document.getElementById(id);
             const display = document.getElementById(id + 'Val');
@@ -492,8 +524,8 @@
                 let val = input.value;
                 if (id === 'scaleRange') val += 'x';
                 else if (id === 'skewStrength' || id === 'tiltAngle') val += '°';
-                else if (id === 'blurStrength' || id === 'shadowStrength' || id === 'shakeStrength' || id === 'circleRadius') val += 'px';
-                else if (id === 'size' || id === 'opacity') val += '%';
+                else if (id === 'blurStrength' || id === 'shadowStrength' || id === 'shakeStrength' || id === 'circleRadius' || id === 'reflectionGap') val += 'px';
+                else if (id === 'size' || id === 'opacity' || id === 'mirrorGap') val += '%';
                 display.textContent = val;
 
                 // 即時更新預覽
@@ -512,7 +544,7 @@
 
         // 特效開關
         // 特效開關
-        ['rotate', 'scale', 'skew', 'tilt', 'blur', 'shadow', 'hue', '3d', 'shake', 'particle'].forEach(name => {
+        ['rotate', 'scale', 'skew', 'tilt', 'blur', 'shadow', 'hue', '3d', 'shake', 'particle', 'reflection', 'mirror'].forEach(name => {
             const checkbox = document.getElementById(name === '3d' ? 'rotate3dEnable' : name + 'Enable');
             const item = document.getElementById('effect-' + name);
             checkbox.addEventListener('change', () => {
@@ -523,10 +555,23 @@
                     updateParticleSystem();
                 }
 
+                // 倒影特殊處理
+                if (name === 'reflection') {
+                    toggleReflection();
+                }
+
+                // 鏡像特殊處理
+                if (name === 'mirror') {
+                    toggleMirror();
+                }
+
                 // 如果是 transform 相關特效，處理互斥邏輯
                 if (transformEffects.includes(name)) {
                     handleTransformConflict(name, checkbox.checked);
                 }
+
+                // 檢查效能警告
+                checkPerformanceWarning();
             });
         });
 
@@ -687,6 +732,14 @@
                     shake: {
                         enabled: document.getElementById('shakeEnable').checked,
                         strength: parseInt(document.getElementById('shakeStrength').value)
+                    },
+                    reflection: {
+                        enabled: document.getElementById('reflectionEnable').checked,
+                        gap: parseInt(document.getElementById('reflectionGap').value)
+                    },
+                    mirror: {
+                        enabled: document.getElementById('mirrorEnable').checked,
+                        gap: parseInt(document.getElementById('mirrorGap').value)
                     }
                 },
                 size: parseInt(document.getElementById('size').value),
@@ -1382,6 +1435,7 @@
             const configJSON = JSON.stringify(config);
             const scriptContent = getAnimationScript();
             const particleScript = getParticleScript(config);  // 加入這行
+            const reflectionMirrorScript = getReflectionMirrorScript(config); // 倒影/鏡像腳本
 
             return '<!DOCTYPE html>\n' +
 '<html lang="zh-TW">\n' +
@@ -1412,6 +1466,7 @@
 '        const config = ' + configJSON + ';\n' +
 '        ' + scriptContent + '\n' +
 '        ' + particleScript + '\n' +
+'        ' + reflectionMirrorScript + '\n' +
 '    </scr' + 'ipt>\n' +
 '</body>\n' +
 '</html>';
@@ -2145,6 +2200,102 @@ if (config.effects.particle.enabled) {
 `;
         }
 
+        // 取得倒影/鏡像腳本
+        function getReflectionMirrorScript(config) {
+            const effects = config.effects || {};
+            
+            // 如果沒有啟用倒影或鏡像，返回空字串
+            if (!effects.reflection?.enabled && !effects.mirror?.enabled) {
+                return '';
+            }
+            
+            let script = '\n// === 倒影/鏡像系統 ===\n';
+            
+            if (effects.reflection?.enabled) {
+                const gap = effects.reflection.gap || 0;
+                script += `
+// 倒影效果
+(function initReflection() {
+    const original = document.getElementById('animatedImage');
+    const reflection = document.createElement('img');
+    reflection.id = 'reflectionImage';
+    reflection.src = original.src;
+    reflection.style.cssText = 'position: absolute; pointer-events: none; will-change: transform, filter, opacity; transform-style: preserve-3d;';
+    document.body.appendChild(reflection);
+    
+    // 倒影樣式
+    reflection.style.width = original.style.width;
+    reflection.style.opacity = '0.3';
+    reflection.style.filter = 'brightness(0.5) saturate(0.3)';
+    reflection.style.animation = original.style.animation;
+    
+    // 位置同步
+    function syncPosition() {
+        const rect = original.getBoundingClientRect();
+        const reflectionTop = rect.bottom + ${gap};
+        const reflectionLeft = rect.left;
+        
+        reflection.style.top = reflectionTop + 'px';
+        reflection.style.left = reflectionLeft + 'px';
+        reflection.style.transform = 'scaleY(-1)';
+        
+        requestAnimationFrame(syncPosition);
+    }
+    
+    syncPosition();
+})();
+`;
+            }
+            
+            if (effects.mirror?.enabled) {
+                const gapPercent = effects.mirror.gap || 20;
+                script += `
+// 鏡像效果
+(function initMirror() {
+    const original = document.getElementById('animatedImage');
+    const mirror = document.createElement('img');
+    mirror.id = 'mirrorImage';
+    mirror.src = original.src;
+    mirror.style.cssText = 'position: absolute; pointer-events: none; will-change: transform, filter, opacity; transform-style: preserve-3d;';
+    document.body.appendChild(mirror);
+    
+    // 鏡像樣式
+    mirror.style.width = original.style.width;
+    mirror.style.opacity = original.style.opacity;
+    mirror.style.animation = original.style.animation;
+    mirror.style.filter = original.style.filter;
+    
+    // 位置同步（左右對稱）
+    const containerWidth = window.innerWidth;
+    const offset = containerWidth * (${gapPercent} / 100);
+    
+    function syncPosition() {
+        const rect = original.getBoundingClientRect();
+        const currentCenterX = (rect.left + rect.right) / 2;
+        const currentCenterY = (rect.top + rect.bottom) / 2;
+        
+        // 原圖往左偏移
+        const originalLeft = currentCenterX - offset;
+        original.style.left = originalLeft + 'px';
+        original.style.top = currentCenterY + 'px';
+        
+        // 鏡像往右偏移 + 水平翻轉
+        const mirrorLeft = currentCenterX + offset;
+        mirror.style.left = mirrorLeft + 'px';
+        mirror.style.top = currentCenterY + 'px';
+        mirror.style.transform = 'translate(-50%, -50%) scaleX(-1)';
+        
+        requestAnimationFrame(syncPosition);
+    }
+    
+    syncPosition();
+})();
+`;
+            }
+            
+            return script;
+        }
+
         // 載入設定並回填表單
         function loadConfig(config) {
             // 載入圖片
@@ -2268,6 +2419,22 @@ if (config.effects.particle.enabled) {
                     document.getElementById('shakeEnable').dispatchEvent(new Event('change'));
                     document.getElementById('shakeStrength').value = config.effects.shake.strength;
                     document.getElementById('shakeStrength').dispatchEvent(new Event('input'));
+                }
+                // 倒影
+                if (config.effects.reflection) {
+                    document.getElementById('reflectionEnable').checked = config.effects.reflection.enabled;
+                    document.getElementById('reflectionEnable').dispatchEvent(new Event('change'));
+                    document.getElementById('reflectionGap').value = config.effects.reflection.gap || 0;
+                    document.getElementById('reflectionGap').dispatchEvent(new Event('input'));
+                }
+                // 鏡像
+                if (config.effects.mirror) {
+                    document.getElementById('mirrorEnable').checked = config.effects.mirror.enabled;
+                    document.getElementById('mirrorEnable').dispatchEvent(new Event('change'));
+                    if (config.effects.mirror.gap !== undefined) {
+                        document.getElementById('mirrorGap').value = config.effects.mirror.gap;
+                        document.getElementById('mirrorGap').dispatchEvent(new Event('input'));
+                    }
                 }
             }
 
@@ -2420,7 +2587,7 @@ if (config.effects.particle.enabled) {
             document.querySelector(`input[name="flip"][value="${flipValue}"]`).checked = true;
 
             // 重置所有特效
-            ['rotateEnable', 'scaleEnable', 'skewEnable', 'tiltEnable', 'blurEnable', 'shadowEnable', 'hueEnable', 'rotate3dEnable', 'shakeEnable'].forEach(id => {
+            ['rotateEnable', 'scaleEnable', 'skewEnable', 'tiltEnable', 'blurEnable', 'shadowEnable', 'hueEnable', 'rotate3dEnable', 'shakeEnable', 'reflectionEnable', 'mirrorEnable'].forEach(id => {
                 document.getElementById(id).checked = false;
                 document.getElementById(id).dispatchEvent(new Event('change'));
             });
@@ -2679,6 +2846,302 @@ document.getElementById('particleType').addEventListener('change', () => {
         initParticles();
     }
 });
+
+// ========================================
+// 倒影/鏡像系統
+// ========================================
+
+let reflectionAnimationId = null;
+let mirrorAnimationId = null;
+
+// 切換倒影效果
+function toggleReflection() {
+    const enabled = document.getElementById('reflectionEnable').checked;
+    const mirrorCheckbox = document.getElementById('mirrorEnable');
+    
+    // 互斥邏輯：倒影與鏡像不能同時啟用
+    if (enabled && mirrorCheckbox.checked) {
+        mirrorCheckbox.checked = false;
+        toggleMirror(); // 移除鏡像
+    }
+    
+    // 禁用/啟用鏡像選項
+    if (mirrorCheckbox) {
+        mirrorCheckbox.disabled = enabled;
+        mirrorCheckbox.parentElement.style.opacity = enabled ? '0.5' : '1';
+        mirrorCheckbox.parentElement.style.cursor = enabled ? 'not-allowed' : 'pointer';
+    }
+    
+    updateReflection();
+}
+
+// 更新倒影
+function updateReflection() {
+    const enabled = document.getElementById('reflectionEnable').checked;
+    const original = document.getElementById('previewImg');
+    const container = document.getElementById('animationContainer');
+    
+    // 移除舊的倒影
+    const oldReflection = document.getElementById('reflectionImg');
+    if (oldReflection) {
+        oldReflection.remove();
+    }
+    
+    // 停止同步動畫
+    if (reflectionAnimationId) {
+        cancelAnimationFrame(reflectionAnimationId);
+        reflectionAnimationId = null;
+    }
+    
+    if (!enabled || !currentImageData) return;
+    
+    // 建立倒影元素
+    const reflection = document.createElement('img');
+    reflection.id = 'reflectionImg';
+    reflection.src = original.src;
+    reflection.style.cssText = `
+        position: absolute;
+        pointer-events: none;
+        will-change: transform, filter, opacity;
+        transform-style: preserve-3d;
+    `;
+    container.appendChild(reflection);
+    
+    // 同步基本屬性
+    reflection.style.width = original.style.width;
+    
+    // 倒影樣式（參考 PhysicsGIF）
+    reflection.style.opacity = '0.3'; // 固定透明度
+    reflection.style.filter = 'brightness(0.5) saturate(0.3)'; // 變暗 + 降低飽和度
+    
+    // 同步動畫（包含移動）
+    reflection.style.animation = original.style.animation;
+    
+    // 開始位置同步
+    syncReflectionPosition();
+}
+
+// 同步倒影位置（即時跟隨原圖）
+function syncReflectionPosition() {
+    const original = document.getElementById('previewImg');
+    const reflection = document.getElementById('reflectionImg');
+    
+    if (!reflection || !reflection.isConnected) return;
+    
+    const lakeGap = parseInt(document.getElementById('reflectionGap').value) || 0;
+    
+    function update() {
+        if (!reflection.isConnected) {
+            reflectionAnimationId = null;
+            return;
+        }
+        
+        const originalRect = original.getBoundingClientRect();
+        const containerRect = original.parentElement.getBoundingClientRect();
+        
+        // 計算倒影起點（原圖底部 + 間距）
+        const reflectionTop = originalRect.bottom - containerRect.top + lakeGap;
+        const reflectionLeft = originalRect.left - containerRect.left;
+        
+        // 更新倒影位置
+        reflection.style.top = reflectionTop + 'px';
+        reflection.style.left = reflectionLeft + 'px';
+        
+        // 倒影翻轉（以倒影頂部為軸垂直翻轉）
+        reflection.style.transform = 'scaleY(-1)';
+        
+        reflectionAnimationId = requestAnimationFrame(update);
+    }
+    
+    update();
+}
+
+// 倒影間距變更時更新
+document.getElementById('reflectionGap').addEventListener('input', () => {
+    if (document.getElementById('reflectionEnable').checked) {
+        syncReflectionPosition();
+    }
+});
+
+// 切換鏡像效果
+function toggleMirror() {
+    const enabled = document.getElementById('mirrorEnable').checked;
+    const reflectionCheckbox = document.getElementById('reflectionEnable');
+    
+    // 互斥邏輯：鏡像與倒影不能同時啟用
+    if (enabled && reflectionCheckbox.checked) {
+        reflectionCheckbox.checked = false;
+        toggleReflection(); // 移除倒影
+    }
+    
+    // 禁用/啟用倒影選項
+    if (reflectionCheckbox) {
+        reflectionCheckbox.disabled = enabled;
+        reflectionCheckbox.parentElement.style.opacity = enabled ? '0.5' : '1';
+        reflectionCheckbox.parentElement.style.cursor = enabled ? 'not-allowed' : 'pointer';
+    }
+    
+    updateMirror();
+}
+
+// 更新鏡像
+function updateMirror() {
+    const enabled = document.getElementById('mirrorEnable').checked;
+    const original = document.getElementById('previewImg');
+    const container = document.getElementById('animationContainer');
+    
+    // 移除舊的鏡像
+    const oldMirror = document.getElementById('mirrorImg');
+    if (oldMirror) {
+        oldMirror.remove();
+    }
+    
+    // 停止同步動畫
+    if (mirrorAnimationId) {
+        cancelAnimationFrame(mirrorAnimationId);
+        mirrorAnimationId = null;
+    }
+    
+    if (!enabled || !currentImageData) {
+        // 恢復原圖到中心位置
+        if (!document.getElementById('reflectionEnable').checked) {
+            // 只有在沒有倒影時才重置位置
+            updatePreview();
+        }
+        return;
+    }
+    
+    // 建立鏡像元素
+    const mirror = document.createElement('img');
+    mirror.id = 'mirrorImg';
+    mirror.src = original.src;
+    mirror.style.cssText = `
+        position: absolute;
+        pointer-events: none;
+        will-change: transform, filter, opacity;
+        transform-style: preserve-3d;
+    `;
+    container.appendChild(mirror);
+    
+    // 同步基本屬性
+    mirror.style.width = original.style.width;
+    mirror.style.opacity = original.style.opacity;
+    
+    // 同步動畫和濾鏡
+    mirror.style.animation = original.style.animation;
+    mirror.style.filter = original.style.filter;
+    
+    // 開始位置同步
+    syncMirrorPosition();
+}
+
+// 同步鏡像位置（左右對稱）
+function syncMirrorPosition() {
+    const original = document.getElementById('previewImg');
+    const mirror = document.getElementById('mirrorImg');
+    
+    if (!mirror || !mirror.isConnected) return;
+    
+    const container = original.parentElement;
+    const containerWidth = container.offsetWidth;
+    
+    // 使用可調整的間距百分比（預設 20%）
+    const mirrorGapPercent = parseInt(document.getElementById('mirrorGap').value) || 20;
+    const offset = containerWidth * (mirrorGapPercent / 100);
+    
+    function update() {
+        if (!mirror.isConnected) {
+            mirrorAnimationId = null;
+            return;
+        }
+        
+        const containerRect = container.getBoundingClientRect();
+        const centerX = containerRect.width / 2;
+        const centerY = containerRect.height / 2;
+        
+        // 原圖往左偏移（使用 transform 而非改變 left）
+        const originalTransform = `translate(calc(-50% - ${offset}px), -50%)`;
+        
+        // 鏡像往右偏移 + 水平翻轉
+        const mirrorTransform = `translate(calc(-50% + ${offset}px), -50%) scaleX(-1)`;
+        
+        original.style.left = '50%';
+        original.style.top = '50%';
+        original.style.transform = originalTransform;
+        
+        mirror.style.left = '50%';
+        mirror.style.top = '50%';
+        mirror.style.transform = mirrorTransform;
+        
+        mirrorAnimationId = requestAnimationFrame(update);
+    }
+    
+    update();
+}
+
+// 鏡像間距變更時更新
+document.getElementById('mirrorGap').addEventListener('input', () => {
+    if (document.getElementById('mirrorEnable').checked) {
+        syncMirrorPosition();
+    }
+});
+
+// 效能警告檢查
+function checkPerformanceWarning() {
+    const activeEffects = [];
+    
+    if (document.getElementById('rotateEnable')?.checked) activeEffects.push('旋轉');
+    if (document.getElementById('scaleEnable')?.checked) activeEffects.push('縮放');
+    if (document.getElementById('skewEnable')?.checked) activeEffects.push('扭曲');
+    if (document.getElementById('tiltEnable')?.checked) activeEffects.push('傾斜');
+    if (document.getElementById('blurEnable')?.checked) activeEffects.push('模糊');
+    if (document.getElementById('shadowEnable')?.checked) activeEffects.push('陰影');
+    if (document.getElementById('hueEnable')?.checked) activeEffects.push('色相');
+    if (document.getElementById('rotate3dEnable')?.checked) activeEffects.push('3D旋轉');
+    if (document.getElementById('shakeEnable')?.checked) activeEffects.push('抖動');
+    if (document.getElementById('reflectionEnable')?.checked) activeEffects.push('倒影');
+    if (document.getElementById('mirrorEnable')?.checked) activeEffects.push('鏡像');
+    if (document.getElementById('particleEnable')?.checked) activeEffects.push('粒子');
+    
+    const warningDiv = document.getElementById('performanceWarning');
+    
+    if (activeEffects.length >= 4) {
+        if (!warningDiv) {
+            const div = document.createElement('div');
+            div.id = 'performanceWarning';
+            div.style.cssText = `
+                background: #ff9800;
+                color: #000;
+                padding: 10px;
+                margin: 10px 0;
+                border-radius: 5px;
+                font-size: 13px;
+                font-weight: bold;
+            `;
+            div.innerHTML = '⚠️ 已啟用多個視覺效果，可能影響效能或瀏覽器播放順暢度';
+            const sidebar = document.querySelector('.sidebar');
+            const firstSection = document.querySelector('.section');
+            if (sidebar && firstSection) {
+                sidebar.insertBefore(div, firstSection);
+            }
+        }
+    } else {
+        if (warningDiv) {
+            warningDiv.remove();
+        }
+    }
+}
+
+// 視窗大小變更時重新同步倒影/鏡像
+window.addEventListener('resize', () => {
+    if (document.getElementById('reflectionEnable').checked) {
+        syncReflectionPosition();
+    }
+    if (document.getElementById('mirrorEnable').checked) {
+        syncMirrorPosition();
+    }
+});
+
     </script>
 </body>
 </html>
