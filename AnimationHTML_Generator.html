@@ -364,6 +364,23 @@
                 </div>
 
                 <!-- 3D旋轉 -->
+                <!-- 負片 -->
+                <div class="effect-item" id="effect-invert">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="invertEnable">
+                        <label for="invertEnable" style="margin: 0; font-weight: bold;">負片 (Invert)</label>
+                    </div>
+                    <div class="effect-controls">
+                        <div class="form-group">
+                            <label>模式</label>
+                            <select id="invertMode" onchange="updatePreview()">
+                                <option value="static">靜態</option>
+                                <option value="flash">閃爍</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="effect-item" id="effect-3d">
                     <div class="checkbox-group">
                         <input type="checkbox" id="rotate3dEnable">
@@ -540,11 +557,11 @@
 
         // Transform 衝突的特效組（這些特效會互相覆蓋）
         const transformEffects = ['rotate', 'scale', 'skew', 'tilt', '3d', 'shake'];
-        const nonTransformEffects = ['blur', 'shadow', 'hue'];
+        const nonTransformEffects = ['blur', 'shadow', 'hue', 'invert'];
 
         // 特效開關
         // 特效開關
-        ['rotate', 'scale', 'skew', 'tilt', 'blur', 'shadow', 'hue', '3d', 'shake', 'particle', 'reflection', 'mirror'].forEach(name => {
+        ['rotate', 'scale', 'skew', 'tilt', 'blur', 'shadow', 'hue', 'invert', '3d', 'shake', 'particle', 'reflection', 'mirror'].forEach(name => {
             const checkbox = document.getElementById(name === '3d' ? 'rotate3dEnable' : name + 'Enable');
             const item = document.getElementById('effect-' + name);
             checkbox.addEventListener('change', () => {
@@ -723,6 +740,10 @@
                     hueRotate: {
                         enabled: document.getElementById('hueEnable').checked,
                         speed: parseInt(document.getElementById('hueSpeed').value)
+                    },
+                    invert: {
+                        enabled: document.getElementById('invertEnable').checked,
+                        mode: document.getElementById('invertMode').value
                     },
                     rotate3d: {
                         enabled: document.getElementById('rotate3dEnable').checked,
@@ -1263,6 +1284,16 @@
                 animations.push(`preview-hue-rotate ${hueSpeed}s linear infinite`);
             }
 
+            // 負片
+            if (effects.invert && effects.invert.enabled) {
+                if (effects.invert.mode === 'flash') {
+                    css += '@keyframes preview-invert-flash { 0%, 49% { filter: invert(100%); } 50%, 100% { filter: none; } }\n';
+                    animations.push('preview-invert-flash 1s step-end infinite');
+                } else {
+                    filters.push('invert(100%)');
+                }
+            }
+
             // 3D旋轉
             if (effects.rotate3d.enabled) {
                 const r3dSpeed = 11 - effects.rotate3d.speed;
@@ -1399,7 +1430,11 @@
                     shake: {
                         enabled: document.getElementById('shakeEnable').checked,
                         strength: parseInt(document.getElementById('shakeStrength').value)
-},
+                    },
+                    invert: {
+                        enabled: document.getElementById('invertEnable').checked,
+                        mode: document.getElementById('invertMode').value
+                    },
                     particle: {
                         enabled: document.getElementById('particleEnable').checked,
                         type: document.getElementById('particleType').value,
@@ -1952,6 +1987,17 @@
             styleSheet.textContent += hueKeyframes + '\n';
         }
 
+        // 負片
+        if (effects.invert && effects.invert.enabled) {
+            if (effects.invert.mode === 'flash') {
+                const invertKeyframes = '@keyframes invert-flash { 0%, 49% { filter: invert(100%); } 50%, 100% { filter: none; } }';
+                animations.push('invert-flash 1s step-end infinite');
+                styleSheet.textContent += invertKeyframes + '\n';
+            } else {
+                filters.push('invert(100%)');
+            }
+        }
+
         // 3D旋轉
         if (effects.rotate3d.enabled) {
             const r3dSpeed = 11 - effects.rotate3d.speed;
@@ -2399,6 +2445,11 @@ if (config.effects.particle.enabled) {
                     document.getElementById('shadowStrength').dispatchEvent(new Event('input'));
                 }
                 // 色相旋轉
+                if (config.effects.invert) {
+                    document.getElementById('invertEnable').checked = config.effects.invert.enabled;
+                    document.getElementById('invertEnable').dispatchEvent(new Event('change'));
+                    document.getElementById('invertMode').value = config.effects.invert.mode || 'static';
+                }
                 if (config.effects.hueRotate) {
                     document.getElementById('hueEnable').checked = config.effects.hueRotate.enabled;
                     document.getElementById('hueEnable').dispatchEvent(new Event('change'));
