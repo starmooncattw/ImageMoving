@@ -381,6 +381,53 @@
                     </div>
                 </div>
 
+                <div class="effect-item" id="effect-sepia">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="sepiaEnable">
+                        <label for="sepiaEnable" style="margin: 0; font-weight: bold;">老電影 (Sepia)</label>
+                    </div>
+                    <div class="effect-controls">
+                        <div class="form-group">
+                            <label>強度 (%)</label>
+                            <input type="range" id="sepiaStrength" min="0" max="100" value="100">
+                            <div class="range-label"><span>0</span><span id="sepiaStrengthVal">100</span><span>100</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="effect-item" id="effect-glitch">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="glitchEnable">
+                        <label for="glitchEnable" style="margin: 0; font-weight: bold;">故障 (Glitch)</label>
+                    </div>
+                    <div class="effect-controls">
+                        <div class="form-group">
+                            <label>強度</label>
+                            <input type="range" id="glitchStrength" min="1" max="10" value="5">
+                            <div class="range-label"><span>1</span><span id="glitchStrengthVal">5</span><span>10</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="effect-item" id="effect-wave">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="waveEnable">
+                        <label for="waveEnable" style="margin: 0; font-weight: bold;">波浪 (Wave)</label>
+                    </div>
+                    <div class="effect-controls">
+                        <div class="form-group">
+                            <label>強度</label>
+                            <input type="range" id="waveStrength" min="1" max="10" value="5">
+                            <div class="range-label"><span>1</span><span id="waveStrengthVal">5</span><span>10</span></div>
+                        </div>
+                        <div class="form-group">
+                            <label>速度</label>
+                            <input type="range" id="waveSpeed" min="1" max="10" value="5">
+                            <div class="range-label"><span>1</span><span id="waveSpeedVal">5</span><span>10</span></div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="effect-item" id="effect-3d">
                     <div class="checkbox-group">
                         <input type="checkbox" id="rotate3dEnable">
@@ -533,7 +580,7 @@
 
         // 初始化
         // 初始化
-        const rangeInputs = ['speed', 'stayDuration', 'circleRadius', 'rotateSpeed', 'scaleRange', 'skewStrength', 'tiltAngle', 'blurStrength', 'shadowStrength', 'hueSpeed', 'rotate3dSpeed', 'shakeStrength', 'particleSpeed', 'reflectionGap', 'mirrorGap', 'size', 'opacity'];
+        const rangeInputs = ['speed', 'stayDuration', 'circleRadius', 'rotateSpeed', 'scaleRange', 'skewStrength', 'tiltAngle', 'blurStrength', 'shadowStrength', 'hueSpeed', 'rotate3dSpeed', 'shakeStrength', 'particleSpeed', 'reflectionGap', 'mirrorGap', 'size', 'opacity', 'sepiaStrength', 'glitchStrength', 'waveStrength', 'waveSpeed'];
         rangeInputs.forEach(id => {
             const input = document.getElementById(id);
             const display = document.getElementById(id + 'Val');
@@ -542,7 +589,7 @@
                 if (id === 'scaleRange') val += 'x';
                 else if (id === 'skewStrength' || id === 'tiltAngle') val += '°';
                 else if (id === 'blurStrength' || id === 'shadowStrength' || id === 'shakeStrength' || id === 'circleRadius' || id === 'reflectionGap') val += 'px';
-                else if (id === 'size' || id === 'opacity' || id === 'mirrorGap') val += '%';
+                else if (id === 'size' || id === 'opacity' || id === 'mirrorGap' || id === 'sepiaStrength') val += '%';
                 display.textContent = val;
 
                 // 即時更新預覽
@@ -561,7 +608,7 @@
 
         // 特效開關
         // 特效開關
-        ['rotate', 'scale', 'skew', 'tilt', 'blur', 'shadow', 'hue', 'invert', '3d', 'shake', 'particle', 'reflection', 'mirror'].forEach(name => {
+        ['rotate', 'scale', 'skew', 'tilt', 'blur', 'shadow', 'hue', 'invert', 'sepia', 'glitch', 'wave', '3d', 'shake', 'particle', 'reflection', 'mirror'].forEach(name => {
             const checkbox = document.getElementById(name === '3d' ? 'rotate3dEnable' : name + 'Enable');
             const item = document.getElementById('effect-' + name);
             checkbox.addEventListener('change', () => {
@@ -744,6 +791,19 @@
                     invert: {
                         enabled: document.getElementById('invertEnable').checked,
                         mode: document.getElementById('invertMode').value
+                    },
+                    sepia: {
+                        enabled: document.getElementById('sepiaEnable').checked,
+                        strength: parseInt(document.getElementById('sepiaStrength').value)
+                    },
+                    glitch: {
+                        enabled: document.getElementById('glitchEnable').checked,
+                        strength: parseInt(document.getElementById('glitchStrength').value)
+                    },
+                    wave: {
+                        enabled: document.getElementById('waveEnable').checked,
+                        strength: parseInt(document.getElementById('waveStrength').value),
+                        speed: parseInt(document.getElementById('waveSpeed').value)
                     },
                     rotate3d: {
                         enabled: document.getElementById('rotate3dEnable').checked,
@@ -1294,6 +1354,44 @@
                 }
             }
 
+            // 老電影
+            if (effects.sepia && effects.sepia.enabled) {
+                filters.push(`sepia(${effects.sepia.strength}%)`);
+            }
+
+            // 波浪
+            if (effects.wave?.enabled) {
+                filters.push('url(#previewWaveFilter)');
+            }
+
+            // 故障
+            if (effects.glitch?.enabled) {
+                const o = effects.glitch.strength * 3;
+                css += `@keyframes preview-glitch-1 {
+                    0%,9%{clip-path:inset(0 0 100% 0);transform:translateX(0)}
+                    10%{clip-path:inset(15% 0 70% 0);transform:translateX(${o}px)}
+                    15%{clip-path:inset(50% 0 30% 0);transform:translateX(-${Math.round(o*0.7)}px)}
+                    20%,34%{clip-path:inset(0 0 100% 0);transform:translateX(0)}
+                    35%{clip-path:inset(80% 0 8% 0);transform:translateX(${Math.round(o*0.5)}px)}
+                    40%,64%{clip-path:inset(0 0 100% 0);transform:translateX(0)}
+                    65%{clip-path:inset(30% 0 55% 0);transform:translateX(-${o}px)}
+                    70%,79%{clip-path:inset(0 0 100% 0);transform:translateX(0)}
+                    80%{clip-path:inset(5% 0 88% 0);transform:translateX(${Math.round(o*0.8)}px)}
+                    85%{clip-path:inset(60% 0 25% 0);transform:translateX(-${Math.round(o*0.6)}px)}
+                    90%,100%{clip-path:inset(0 0 100% 0);transform:translateX(0)}
+                }\n`;
+                css += `@keyframes preview-glitch-2 {
+                    0%,19%{clip-path:inset(0 0 100% 0);transform:translateX(0)}
+                    20%{clip-path:inset(40% 0 45% 0);transform:translateX(-${Math.round(o*0.8)}px)}
+                    28%,44%{clip-path:inset(0 0 100% 0);transform:translateX(0)}
+                    45%{clip-path:inset(70% 0 15% 0);transform:translateX(${Math.round(o*0.6)}px)}
+                    50%{clip-path:inset(10% 0 80% 0);transform:translateX(-${o}px)}
+                    55%,74%{clip-path:inset(0 0 100% 0);transform:translateX(0)}
+                    75%{clip-path:inset(55% 0 35% 0);transform:translateX(${Math.round(o*0.9)}px)}
+                    82%,100%{clip-path:inset(0 0 100% 0);transform:translateX(0)}
+                }\n`;
+            }
+
             // 3D旋轉
             if (effects.rotate3d.enabled) {
                 const r3dSpeed = 11 - effects.rotate3d.speed;
@@ -1344,6 +1442,9 @@
             if (filters.length > 0) {
                 previewImg.style.filter = filters.join(' ');
             }
+
+            updateGlitch(effects);
+            updateWave(effects);
         }
 
         // 產生獨立 HTML 檔案
@@ -1435,6 +1536,19 @@
                         enabled: document.getElementById('invertEnable').checked,
                         mode: document.getElementById('invertMode').value
                     },
+                    sepia: {
+                        enabled: document.getElementById('sepiaEnable').checked,
+                        strength: parseInt(document.getElementById('sepiaStrength').value)
+                    },
+                    glitch: {
+                        enabled: document.getElementById('glitchEnable').checked,
+                        strength: parseInt(document.getElementById('glitchStrength').value)
+                    },
+                    wave: {
+                        enabled: document.getElementById('waveEnable').checked,
+                        strength: parseInt(document.getElementById('waveStrength').value),
+                        speed: parseInt(document.getElementById('waveSpeed').value)
+                    },
                     particle: {
                         enabled: document.getElementById('particleEnable').checked,
                         type: document.getElementById('particleType').value,
@@ -1471,6 +1585,7 @@
             const scriptContent = getAnimationScript();
             const particleScript = getParticleScript(config);  // 加入這行
             const reflectionMirrorScript = getReflectionMirrorScript(config); // 倒影/鏡像腳本
+            const waveScript = getWaveScript(config); // 波浪腳本
 
             return '<!DOCTYPE html>\n' +
 '<html lang="zh-TW">\n' +
@@ -1502,6 +1617,7 @@
 '        ' + scriptContent + '\n' +
 '        ' + particleScript + '\n' +
 '        ' + reflectionMirrorScript + '\n' +
+'        ' + waveScript + '\n' +
 '    </scr' + 'ipt>\n' +
 '</body>\n' +
 '</html>';
@@ -1998,6 +2114,77 @@
             }
         }
 
+        // 老電影
+        if (effects.sepia && effects.sepia.enabled) {
+            filters.push(`sepia(${effects.sepia.strength}%)`);
+        }
+
+        // 波浪
+        if (effects.wave && effects.wave.enabled) {
+            filters.push('url(#waveFilter)');
+        }
+
+        // 故障
+        if (effects.glitch && effects.glitch.enabled) {
+            const glitchStr = effects.glitch.strength;
+            const glitchOffset = glitchStr * 3;
+            const glitchSpeed = Math.max(0.2, 0.8 - glitchStr * 0.06).toFixed(2);
+            const glitchSpeed2 = (Math.max(0.2, 0.8 - glitchStr * 0.06) * 1.3).toFixed(2);
+            const gkf1 = `@keyframes glitch-1 {
+                0%,9%{clip-path:inset(0 0 100% 0);transform:translateX(0)}
+                10%{clip-path:inset(15% 0 70% 0);transform:translateX(${glitchOffset}px)}
+                15%{clip-path:inset(50% 0 30% 0);transform:translateX(-${Math.round(glitchOffset*0.7)}px)}
+                20%,34%{clip-path:inset(0 0 100% 0);transform:translateX(0)}
+                35%{clip-path:inset(80% 0 8% 0);transform:translateX(${Math.round(glitchOffset*0.5)}px)}
+                40%,64%{clip-path:inset(0 0 100% 0);transform:translateX(0)}
+                65%{clip-path:inset(30% 0 55% 0);transform:translateX(-${glitchOffset}px)}
+                70%,79%{clip-path:inset(0 0 100% 0);transform:translateX(0)}
+                80%{clip-path:inset(5% 0 88% 0);transform:translateX(${Math.round(glitchOffset*0.8)}px)}
+                85%{clip-path:inset(60% 0 25% 0);transform:translateX(-${Math.round(glitchOffset*0.6)}px)}
+                90%,100%{clip-path:inset(0 0 100% 0);transform:translateX(0)}
+            }`;
+            const gkf2 = `@keyframes glitch-2 {
+                0%,19%{clip-path:inset(0 0 100% 0);transform:translateX(0)}
+                20%{clip-path:inset(40% 0 45% 0);transform:translateX(-${Math.round(glitchOffset*0.8)}px)}
+                28%,44%{clip-path:inset(0 0 100% 0);transform:translateX(0)}
+                45%{clip-path:inset(70% 0 15% 0);transform:translateX(${Math.round(glitchOffset*0.6)}px)}
+                50%{clip-path:inset(10% 0 80% 0);transform:translateX(-${glitchOffset}px)}
+                55%,74%{clip-path:inset(0 0 100% 0);transform:translateX(0)}
+                75%{clip-path:inset(55% 0 35% 0);transform:translateX(${Math.round(glitchOffset*0.9)}px)}
+                82%,100%{clip-path:inset(0 0 100% 0);transform:translateX(0)}
+            }`;
+            styleSheet.textContent += gkf1 + '\n' + gkf2 + '\n';
+
+            const glitch1 = document.createElement('img');
+            glitch1.id = 'glitchLayer1';
+            glitch1.src = img.src;
+            glitch1.style.cssText = 'position: absolute; pointer-events: none; will-change: transform, clip-path; mix-blend-mode: screen;';
+            glitch1.style.width = img.style.width;
+            glitch1.style.opacity = img.style.opacity;
+            glitch1.style.filter = 'sepia(1) saturate(5) hue-rotate(160deg)';
+            glitch1.style.animation = `glitch-1 ${glitchSpeed}s steps(1) infinite`;
+            document.body.appendChild(glitch1);
+
+            const glitch2 = document.createElement('img');
+            glitch2.id = 'glitchLayer2';
+            glitch2.src = img.src;
+            glitch2.style.cssText = 'position: absolute; pointer-events: none; will-change: transform, clip-path; mix-blend-mode: screen;';
+            glitch2.style.width = img.style.width;
+            glitch2.style.opacity = img.style.opacity;
+            glitch2.style.filter = 'sepia(1) saturate(5) hue-rotate(320deg)';
+            glitch2.style.animation = `glitch-2 ${glitchSpeed2}s steps(1) infinite`;
+            document.body.appendChild(glitch2);
+
+            (function syncGlitch() {
+                const rect = img.getBoundingClientRect();
+                glitch1.style.top = rect.top + 'px';
+                glitch1.style.left = rect.left + 'px';
+                glitch2.style.top = rect.top + 'px';
+                glitch2.style.left = rect.left + 'px';
+                requestAnimationFrame(syncGlitch);
+            })();
+        }
+
         // 3D旋轉
         if (effects.rotate3d.enabled) {
             const r3dSpeed = 11 - effects.rotate3d.speed;
@@ -2342,6 +2529,40 @@ if (config.effects.particle.enabled) {
             return script;
         }
 
+        function getWaveScript(config) {
+            if (!config.effects?.wave?.enabled) return '';
+
+            const scale = config.effects.wave.strength * 3;
+            const amplitude = config.effects.wave.strength * 15;
+            const phaseSpeed = (config.effects.wave.speed * 0.03).toFixed(3);
+
+            return `
+// 波浪效果
+(function initWave() {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('style', 'display:none; position:absolute');
+    svg.innerHTML = '<defs><filter id="waveFilter" x="-20%" y="-20%" width="140%" height="140%">' +
+        '<feTurbulence type="fractalNoise" baseFrequency="0.02 0.04" numOctaves="2" result="noise"/>' +
+        '<feOffset id="waveOffsetNode" in="noise" dx="0" dy="0" result="flowNoise"/>' +
+        '<feDisplacementMap in="SourceGraphic" in2="flowNoise" scale="${scale}" xChannelSelector="R" yChannelSelector="G"/>' +
+        '</filter></defs>';
+    document.body.appendChild(svg);
+
+    let t = 0;
+    function animate() {
+        t += ${phaseSpeed};
+        const node = document.getElementById('waveOffsetNode');
+        if (node) {
+            node.setAttribute('dx', Math.sin(t) * ${amplitude});
+            node.setAttribute('dy', Math.cos(t * 0.7) * ${Math.round(amplitude * 0.4)});
+        }
+        requestAnimationFrame(animate);
+    }
+    animate();
+})();
+`;
+        }
+
         // 載入設定並回填表單
         function loadConfig(config) {
             // 載入圖片
@@ -2449,6 +2670,26 @@ if (config.effects.particle.enabled) {
                     document.getElementById('invertEnable').checked = config.effects.invert.enabled;
                     document.getElementById('invertEnable').dispatchEvent(new Event('change'));
                     document.getElementById('invertMode').value = config.effects.invert.mode || 'static';
+                }
+                if (config.effects.sepia) {
+                    document.getElementById('sepiaEnable').checked = config.effects.sepia.enabled;
+                    document.getElementById('sepiaEnable').dispatchEvent(new Event('change'));
+                    document.getElementById('sepiaStrength').value = config.effects.sepia.strength ?? 100;
+                    document.getElementById('sepiaStrength').dispatchEvent(new Event('input'));
+                }
+                if (config.effects.glitch) {
+                    document.getElementById('glitchEnable').checked = config.effects.glitch.enabled;
+                    document.getElementById('glitchEnable').dispatchEvent(new Event('change'));
+                    document.getElementById('glitchStrength').value = config.effects.glitch.strength ?? 5;
+                    document.getElementById('glitchStrength').dispatchEvent(new Event('input'));
+                }
+                if (config.effects.wave) {
+                    document.getElementById('waveEnable').checked = config.effects.wave.enabled;
+                    document.getElementById('waveEnable').dispatchEvent(new Event('change'));
+                    document.getElementById('waveStrength').value = config.effects.wave.strength ?? 5;
+                    document.getElementById('waveStrength').dispatchEvent(new Event('input'));
+                    document.getElementById('waveSpeed').value = config.effects.wave.speed ?? 5;
+                    document.getElementById('waveSpeed').dispatchEvent(new Event('input'));
                 }
                 if (config.effects.hueRotate) {
                     document.getElementById('hueEnable').checked = config.effects.hueRotate.enabled;
@@ -2897,6 +3138,107 @@ document.getElementById('particleType').addEventListener('change', () => {
         initParticles();
     }
 });
+
+// ========================================
+// 故障系統
+// ========================================
+
+let glitchSyncId = null;
+
+function updateGlitch(effects) {
+    ['previewGlitch1', 'previewGlitch2'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+    });
+    if (glitchSyncId) {
+        cancelAnimationFrame(glitchSyncId);
+        glitchSyncId = null;
+    }
+
+    if (!effects?.glitch?.enabled) return;
+
+    const previewImg = document.getElementById('previewImg');
+    if (!previewImg?.src) return;
+
+    const container = document.getElementById('animationContainer');
+    const o = effects.glitch.strength * 3;
+    const speed = Math.max(0.2, 0.8 - effects.glitch.strength * 0.06).toFixed(2);
+    const speed2 = (Math.max(0.2, 0.8 - effects.glitch.strength * 0.06) * 1.3).toFixed(2);
+
+    const layer1 = document.createElement('img');
+    layer1.id = 'previewGlitch1';
+    layer1.src = previewImg.src;
+    layer1.style.cssText = 'position: absolute; pointer-events: none; will-change: transform, clip-path; mix-blend-mode: screen;';
+    layer1.style.width = previewImg.style.width;
+    layer1.style.filter = 'sepia(1) saturate(5) hue-rotate(160deg)';
+    layer1.style.animation = `preview-glitch-1 ${speed}s steps(1) infinite`;
+    container.appendChild(layer1);
+
+    const layer2 = document.createElement('img');
+    layer2.id = 'previewGlitch2';
+    layer2.src = previewImg.src;
+    layer2.style.cssText = 'position: absolute; pointer-events: none; will-change: transform, clip-path; mix-blend-mode: screen;';
+    layer2.style.width = previewImg.style.width;
+    layer2.style.filter = 'sepia(1) saturate(5) hue-rotate(320deg)';
+    layer2.style.animation = `preview-glitch-2 ${speed2}s steps(1) infinite`;
+    container.appendChild(layer2);
+
+    function syncGlitch() {
+        const rect = previewImg.getBoundingClientRect();
+        const cRect = container.getBoundingClientRect();
+        const top = rect.top - cRect.top;
+        const left = rect.left - cRect.left;
+        layer1.style.top = top + 'px';
+        layer1.style.left = left + 'px';
+        layer2.style.top = top + 'px';
+        layer2.style.left = left + 'px';
+        glitchSyncId = requestAnimationFrame(syncGlitch);
+    }
+    syncGlitch();
+}
+
+// ========================================
+// 波浪系統
+// ========================================
+
+let waveSyncId = null;
+
+function updateWave(effects) {
+    const oldSvg = document.getElementById('previewWaveSvg');
+    if (oldSvg) oldSvg.remove();
+    if (waveSyncId) {
+        cancelAnimationFrame(waveSyncId);
+        waveSyncId = null;
+    }
+
+    if (!effects?.wave?.enabled) return;
+
+    const scale = effects.wave.strength * 3;
+    const amplitude = effects.wave.strength * 15;
+    const phaseSpeed = effects.wave.speed * 0.03;
+
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.id = 'previewWaveSvg';
+    svg.setAttribute('style', 'display:none; position:absolute');
+    svg.innerHTML = `<defs><filter id="previewWaveFilter" x="-20%" y="-20%" width="140%" height="140%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.02 0.04" numOctaves="2" result="noise"/>
+        <feOffset id="previewWaveOffset" in="noise" dx="0" dy="0" result="flowNoise"/>
+        <feDisplacementMap in="SourceGraphic" in2="flowNoise" scale="${scale}" xChannelSelector="R" yChannelSelector="G"/>
+    </filter></defs>`;
+    document.body.appendChild(svg);
+
+    let t = 0;
+    function animate() {
+        t += phaseSpeed;
+        const node = document.getElementById('previewWaveOffset');
+        if (node) {
+            node.setAttribute('dx', Math.sin(t) * amplitude);
+            node.setAttribute('dy', Math.cos(t * 0.7) * amplitude * 0.4);
+        }
+        waveSyncId = requestAnimationFrame(animate);
+    }
+    animate();
+}
 
 // ========================================
 // 倒影/鏡像系統
