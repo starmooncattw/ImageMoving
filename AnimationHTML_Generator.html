@@ -565,7 +565,6 @@
     </div>
 
     <!-- 右側預覽區 -->
-    <!-- 右側預覽區 -->
     <div class="preview-area">
         <div id="animationContainer">
             <canvas id="particleCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
@@ -585,7 +584,6 @@
         const particleCanvas = document.getElementById('particleCanvas');
         const particleCtx = particleCanvas.getContext('2d');
 
-        // 初始化
         // 初始化
         const rangeInputs = ['speed', 'stayDuration', 'circleRadius', 'rotateSpeed', 'scaleRange', 'skewStrength', 'tiltAngle', 'blurStrength', 'shadowStrength', 'hueSpeed', 'rotate3dSpeed', 'shakeStrength', 'particleSpeed', 'reflectionGap', 'mirrorGap', 'size', 'opacity', 'sepiaStrength', 'glitchStrength', 'waveStrength', 'waveSpeed'];
         rangeInputs.forEach(id => {
@@ -753,6 +751,7 @@
         let currentImageData = null;
         const previewImg = document.getElementById('previewImg');
         const dynamicStyle = document.getElementById('dynamicStyle');
+        const animState = { loopInterval: null, circleFrame: null, circleTimeout: null, randomInterval: null, bounceFrame: null };
 
         // 圖片上傳
         document.getElementById('imageFile').addEventListener('change', function(e) {
@@ -890,7 +889,14 @@
 
         // 產生預覽動畫CSS
         function generatePreviewAnimation(config) {
-            // 清除舊動畫
+            // 清除舊 JS 動畫計時器與動畫幀
+            if (animState.loopInterval) { clearInterval(animState.loopInterval); animState.loopInterval = null; }
+            if (animState.circleFrame) { cancelAnimationFrame(animState.circleFrame); animState.circleFrame = null; }
+            if (animState.circleTimeout) { clearTimeout(animState.circleTimeout); animState.circleTimeout = null; }
+            if (animState.randomInterval) { clearInterval(animState.randomInterval); animState.randomInterval = null; }
+            if (animState.bounceFrame) { cancelAnimationFrame(animState.bounceFrame); animState.bounceFrame = null; }
+
+            // 清除舊 CSS 動畫
             previewImg.style.animation = 'none';
             previewImg.style.transform = '';
             previewImg.style.translate = '';
@@ -966,8 +972,8 @@
 
                 case 'horizontalLoop':
                     // 停止任何現有的來回動畫
-                    if (window.previewLoopInterval) {
-                        clearInterval(window.previewLoopInterval);
+                    if (animState.loopInterval) {
+                        clearInterval(animState.loopInterval);
                     }
 
                     const hLoopPos = document.querySelector('input[name="horizontalLoopPosition"]:checked')?.value || 'middle';
@@ -1008,7 +1014,7 @@
                                 previewImg.style.left = endPos + '%';
                             }, 50);
 
-                            window.previewLoopInterval = setTimeout(() => {
+                            animState.loopInterval = setTimeout(() => {
                                 currentFlipX = -1;
                                 previewImg.style.transition = 'none';
                                 previewImg.style.translate = getHLoopTranslateY();
@@ -1027,7 +1033,7 @@
                                 previewImg.style.left = startPos + '%';
                             }, 50);
 
-                            window.previewLoopInterval = setTimeout(() => {
+                            animState.loopInterval = setTimeout(() => {
                                 currentFlipX = 1;
                                 previewImg.style.transition = 'none';
                                 previewImg.style.translate = getHLoopTranslateY();
@@ -1089,8 +1095,8 @@
 
                 case 'verticalLoop':
                     // 停止任何現有的來回動畫
-                    if (window.previewLoopInterval) {
-                        clearInterval(window.previewLoopInterval);
+                    if (animState.loopInterval) {
+                        clearInterval(animState.loopInterval);
                     }
 
                     const vLoopPos = document.querySelector('input[name="verticalLoopPosition"]:checked')?.value || 'center';
@@ -1131,7 +1137,7 @@
                                 previewImg.style.top = vEndPos + '%';
                             }, 50);
 
-                            window.previewLoopInterval = setTimeout(() => {
+                            animState.loopInterval = setTimeout(() => {
                                 currentFlipY = -1;
                                 previewImg.style.transition = 'none';
                                 previewImg.style.translate = getVLoopTranslateX();
@@ -1150,7 +1156,7 @@
                                 previewImg.style.top = vStartPos + '%';
                             }, 50);
 
-                            window.previewLoopInterval = setTimeout(() => {
+                            animState.loopInterval = setTimeout(() => {
                                 currentFlipY = 1;
                                 previewImg.style.transition = 'none';
                                 previewImg.style.translate = getVLoopTranslateX();
@@ -1216,11 +1222,11 @@
                         previewImg.style.scale = `${flipScaleX} ${flipScaleY}`;
                     } else {
                         // 隨機移動中心
-                        if (window.previewCircleFrame) {
-                            cancelAnimationFrame(window.previewCircleFrame);
+                        if (animState.circleFrame) {
+                            cancelAnimationFrame(animState.circleFrame);
                         }
-                        if (window.previewCircleTimeout) {
-                            clearTimeout(window.previewCircleTimeout);
+                        if (animState.circleTimeout) {
+                            clearTimeout(animState.circleTimeout);
                         }
 
                         const container = document.getElementById('animationContainer');
@@ -1241,13 +1247,13 @@
                             previewImg.style.top = y + '%';
                             previewImg.style.translate = '-50% -50%';
 
-                            window.previewCircleFrame = requestAnimationFrame(rotateStep);
+                            animState.circleFrame = requestAnimationFrame(rotateStep);
                         }
 
                         function changeCenter() {
                             centerX = 20 + Math.random() * 60;
                             centerY = 20 + Math.random() * 60;
-                            window.previewCircleTimeout = setTimeout(changeCenter, 3000);
+                            animState.circleTimeout = setTimeout(changeCenter, 3000);
                         }
 
                         previewImg.style.scale = `${flipScaleX} ${flipScaleY}`;
@@ -1270,8 +1276,8 @@
 
                 case 'randomAppear':
                     // 停止任何現有的隨機動畫
-                    if (window.previewRandomInterval) {
-                        clearInterval(window.previewRandomInterval);
+                    if (animState.randomInterval) {
+                        clearInterval(animState.randomInterval);
                     }
 
                     css += `@keyframes preview-randomAppear {
@@ -1287,7 +1293,7 @@
                     previewImg.style.scale = `${flipScaleX} ${flipScaleY}`;
 
                     // 定期隨機改變位置
-                    window.previewRandomInterval = setInterval(() => {
+                    animState.randomInterval = setInterval(() => {
                         const container = document.getElementById('animationContainer');
                         const maxX = container.offsetWidth - previewImg.offsetWidth;
                         const maxY = container.offsetHeight - previewImg.offsetHeight;
@@ -1301,11 +1307,11 @@
 
                 case 'randomBounce':
                     // 停止任何現有的隨機動畫
-                    if (window.previewRandomInterval) {
-                        clearInterval(window.previewRandomInterval);
+                    if (animState.randomInterval) {
+                        clearInterval(animState.randomInterval);
                     }
-                    if (window.previewBounceFrame) {
-                        cancelAnimationFrame(window.previewBounceFrame);
+                    if (animState.bounceFrame) {
+                        cancelAnimationFrame(animState.bounceFrame);
                     }
 
                     const container = document.getElementById('animationContainer');
@@ -1328,7 +1334,7 @@
 
                         previewImg.style.left = x + 'px';
                         previewImg.style.top = y + 'px';
-                        window.previewBounceFrame = requestAnimationFrame(bounce);
+                        animState.bounceFrame = requestAnimationFrame(bounce);
                     }
                     bounce();
                     break;
@@ -1529,9 +1535,8 @@
         // 產生獨立 HTML 檔案
         function generateOutput() {
             const imageFile = document.getElementById('imageFile').files[0];
-            const preview = document.querySelector('#preview img');
 
-            if (!imageFile && !preview) {
+            if (!imageFile && !currentImageData) {
                 alert('請先上傳圖片！');
                 return;
             }
@@ -1539,11 +1544,12 @@
             if (imageFile) {
                 const reader = new FileReader();
                 reader.onload = function(event) {
-                    createOutputFile(event.target.result);
+                    currentImageData = event.target.result;
+                    createOutputFile(currentImageData);
                 };
                 reader.readAsDataURL(imageFile);
             } else {
-                createOutputFile(preview.src);
+                createOutputFile(currentImageData);
             }
         }
 
@@ -2132,7 +2138,7 @@
 
         // 縮放脈動
         if (effects.scale.enabled) {
-            const scaleSpeed = 11 - effects.scale.speed || 3;
+            const scaleSpeed = (11 - effects.scale.speed) || 3;
             const scaleRange = effects.scale.range;
             let scaleKeyframes = '';
             if (effects.scale.mode === 'pulse') {
@@ -2339,13 +2345,6 @@
         }
 
         document.head.appendChild(styleSheet);
-
-        // 視窗調整
-        window.addEventListener('resize', () => {
-            if (config.movement.mode === 'randomBounce') {
-                location.reload();
-            }
-        });
         };
             return func.toString() + '\ninitAnimation(config);';
         }
@@ -2676,8 +2675,8 @@ if (config.effects.particle.enabled) {
         function loadConfig(config) {
             // 載入圖片
             if (config.image) {
-                const preview = document.getElementById('preview');
-                preview.innerHTML = `<img src="${config.image}" alt="preview">`;
+                currentImageData = config.image;
+                updatePreview();
             }
 
             // 載入移動設定
@@ -3005,7 +3004,7 @@ if (config.effects.particle.enabled) {
             document.querySelector(`input[name="flip"][value="${flipValue}"]`).checked = true;
 
             // 重置所有特效
-            ['rotateEnable', 'scaleEnable', 'skewEnable', 'tiltEnable', 'blurEnable', 'shadowEnable', 'hueEnable', 'rotate3dEnable', 'shakeEnable', 'reflectionEnable', 'mirrorEnable'].forEach(id => {
+            ['rotateEnable', 'scaleEnable', 'skewEnable', 'tiltEnable', 'blurEnable', 'shadowEnable', 'hueEnable', 'rotate3dEnable', 'shakeEnable', 'reflectionEnable', 'mirrorEnable', 'invertEnable', 'sepiaEnable', 'glitchEnable', 'waveEnable'].forEach(id => {
                 document.getElementById(id).checked = false;
                 document.getElementById(id).dispatchEvent(new Event('change'));
             });
@@ -3587,25 +3586,25 @@ function syncMirrorPosition() {
             mirrorAnimationId = null;
             return;
         }
-        
-        const containerRect = container.getBoundingClientRect();
-        const centerX = containerRect.width / 2;
-        const centerY = containerRect.height / 2;
-        
+
         // 原圖往左偏移（使用 transform 而非改變 left）
         const originalTransform = `translate(calc(-50% - ${offset}px), -50%)`;
-        
+
         // 鏡像往右偏移 + 水平翻轉
         const mirrorTransform = `translate(calc(-50% + ${offset}px), -50%) scaleX(-1)`;
-        
+
         original.style.left = '50%';
         original.style.top = '50%';
+        original.style.translate = 'none';
+        original.style.scale = 'none';
         original.style.transform = originalTransform;
-        
+
         mirror.style.left = '50%';
         mirror.style.top = '50%';
+        mirror.style.translate = 'none';
+        mirror.style.scale = 'none';
         mirror.style.transform = mirrorTransform;
-        
+
         mirrorAnimationId = requestAnimationFrame(update);
     }
     
@@ -3635,6 +3634,10 @@ function checkPerformanceWarning() {
     if (document.getElementById('reflectionEnable')?.checked) activeEffects.push('倒影');
     if (document.getElementById('mirrorEnable')?.checked) activeEffects.push('鏡像');
     if (document.getElementById('particleEnable')?.checked) activeEffects.push('粒子');
+    if (document.getElementById('invertEnable')?.checked) activeEffects.push('負片');
+    if (document.getElementById('sepiaEnable')?.checked) activeEffects.push('老電影');
+    if (document.getElementById('glitchEnable')?.checked) activeEffects.push('故障');
+    if (document.getElementById('waveEnable')?.checked) activeEffects.push('波浪');
     
     const warningDiv = document.getElementById('performanceWarning');
     
