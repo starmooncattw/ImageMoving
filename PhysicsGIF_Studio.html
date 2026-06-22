@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Physics GIF Studio - 物理GIF工作室</title>
-    <script src="js/gif.js"></script>
     <style>
         /* === 基礎樣式 === */
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -111,6 +110,10 @@
                 <option value="verticalLoop">垂直來回</option>
                 <option value="zigzag">之字形</option>
                 <option value="randomBounce">隨機彈跳</option>
+                <option value="diagonalTLBR">對角線: 左上→右下</option>
+                <option value="diagonalTRBL">對角線: 右上→左下</option>
+                <option value="diagonalBLTR">對角線: 左下→右上</option>
+                <option value="diagonalBRTL">對角線: 右下→左上</option>
             </select>
         </div>
         <div class="control-item">
@@ -190,6 +193,13 @@
             <label>粒子速度 <span id="val_particleSpeed">0.1</span></label>
             <input type="range" id="particleSpeed" min="0" max="0.5" step="0.01" value="0.1" oninput="updateParam('particleSpeed', this.value)">
         </div>
+        <div class="control-item">
+            <label>粒子層級</label>
+            <select id="particleLayer" onchange="updateParam('particleLayer', this.value)">
+                <option value="front">圖片之前（前景）</option>
+                <option value="behind">圖片之後（背景）</option>
+            </select>
+        </div>
     </div>
 
     <div class="panel-title" style="margin-top:10px;">背面與開關</div>
@@ -234,14 +244,22 @@
         <div class="control-item"><label>FPS</label><select id="fps"><option value="10">10</option><option value="15">15</option><option value="20" selected>20</option><option value="30">30</option></select></div>
         <div class="control-item full-width">
             <label>背景模式</label>
-            <select id="bgMode">
+            <select id="bgMode" onchange="toggleCustomBg()">
                 <option value="transparent">透明背景</option>
                 <option value="matte_white">去背優化 (白)</option>
                 <option value="matte_black">去背優化 (黑)</option>
                 <option value="white">純白背景</option>
                 <option value="black">純黑背景</option>
                 <option value="green">綠幕</option>
+                <option value="custom">自訂顏色</option>
             </select>
+        </div>
+        <div class="control-item" id="customBgRow" style="display:none">
+            <label>自訂背景色</label>
+            <div style="display:flex;gap:6px;align-items:center">
+                <input type="color" id="customBgColor" value="#FFFFFF" style="width:40px;height:32px;padding:2px;cursor:pointer">
+                <input type="text" id="customBgHex" value="#FFFFFF" maxlength="7" placeholder="#RRGGBB" style="flex:1;font-family:monospace" oninput="syncBgHex(this.value)">
+            </div>
         </div>
     </div>
 
@@ -256,6 +274,11 @@
         <p id="progress-text" style="color:#ccc; margin-top:8px; font-size:0.9rem;">0%</p>
     </div>
 </div>
+
+<script>
+// gif.js 0.2.0 - https://github.com/jnordberg/gif.js
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.GIF=f()}})(function(){var define,module,exports;return function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s}({1:[function(require,module,exports){function EventEmitter(){this._events=this._events||{};this._maxListeners=this._maxListeners||undefined}module.exports=EventEmitter;EventEmitter.EventEmitter=EventEmitter;EventEmitter.prototype._events=undefined;EventEmitter.prototype._maxListeners=undefined;EventEmitter.defaultMaxListeners=10;EventEmitter.prototype.setMaxListeners=function(n){if(!isNumber(n)||n<0||isNaN(n))throw TypeError("n must be a positive number");this._maxListeners=n;return this};EventEmitter.prototype.emit=function(type){var er,handler,len,args,i,listeners;if(!this._events)this._events={};if(type==="error"){if(!this._events.error||isObject(this._events.error)&&!this._events.error.length){er=arguments[1];if(er instanceof Error){throw er}else{var err=new Error('Uncaught, unspecified "error" event. ('+er+")");err.context=er;throw err}}}handler=this._events[type];if(isUndefined(handler))return false;if(isFunction(handler)){switch(arguments.length){case 1:handler.call(this);break;case 2:handler.call(this,arguments[1]);break;case 3:handler.call(this,arguments[1],arguments[2]);break;default:args=Array.prototype.slice.call(arguments,1);handler.apply(this,args)}}else if(isObject(handler)){args=Array.prototype.slice.call(arguments,1);listeners=handler.slice();len=listeners.length;for(i=0;i<len;i++)listeners[i].apply(this,args)}return true};EventEmitter.prototype.addListener=function(type,listener){var m;if(!isFunction(listener))throw TypeError("listener must be a function");if(!this._events)this._events={};if(this._events.newListener)this.emit("newListener",type,isFunction(listener.listener)?listener.listener:listener);if(!this._events[type])this._events[type]=listener;else if(isObject(this._events[type]))this._events[type].push(listener);else this._events[type]=[this._events[type],listener];if(isObject(this._events[type])&&!this._events[type].warned){if(!isUndefined(this._maxListeners)){m=this._maxListeners}else{m=EventEmitter.defaultMaxListeners}if(m&&m>0&&this._events[type].length>m){this._events[type].warned=true;console.error("(node) warning: possible EventEmitter memory "+"leak detected. %d listeners added. "+"Use emitter.setMaxListeners() to increase limit.",this._events[type].length);if(typeof console.trace==="function"){console.trace()}}}return this};EventEmitter.prototype.on=EventEmitter.prototype.addListener;EventEmitter.prototype.once=function(type,listener){if(!isFunction(listener))throw TypeError("listener must be a function");var fired=false;function g(){this.removeListener(type,g);if(!fired){fired=true;listener.apply(this,arguments)}}g.listener=listener;this.on(type,g);return this};EventEmitter.prototype.removeListener=function(type,listener){var list,position,length,i;if(!isFunction(listener))throw TypeError("listener must be a function");if(!this._events||!this._events[type])return this;list=this._events[type];length=list.length;position=-1;if(list===listener||isFunction(list.listener)&&list.listener===listener){delete this._events[type];if(this._events.removeListener)this.emit("removeListener",type,listener)}else if(isObject(list)){for(i=length;i-- >0;){if(list[i]===listener||list[i].listener&&list[i].listener===listener){position=i;break}}if(position<0)return this;if(list.length===1){list.length=0;delete this._events[type]}else{list.splice(position,1)}if(this._events.removeListener)this.emit("removeListener",type,listener)}return this};EventEmitter.prototype.removeAllListeners=function(type){var key,listeners;if(!this._events)return this;if(!this._events.removeListener){if(arguments.length===0)this._events={};else if(this._events[type])delete this._events[type];return this}if(arguments.length===0){for(key in this._events){if(key==="removeListener")continue;this.removeAllListeners(key)}this.removeAllListeners("removeListener");this._events={};return this}listeners=this._events[type];if(isFunction(listeners)){this.removeListener(type,listeners)}else if(listeners){while(listeners.length)this.removeListener(type,listeners[listeners.length-1])}delete this._events[type];return this};EventEmitter.prototype.listeners=function(type){var ret;if(!this._events||!this._events[type])ret=[];else if(isFunction(this._events[type]))ret=[this._events[type]];else ret=this._events[type].slice();return ret};EventEmitter.prototype.listenerCount=function(type){if(this._events){var evlistener=this._events[type];if(isFunction(evlistener))return 1;else if(evlistener)return evlistener.length}return 0};EventEmitter.listenerCount=function(emitter,type){return emitter.listenerCount(type)};function isFunction(arg){return typeof arg==="function"}function isNumber(arg){return typeof arg==="number"}function isObject(arg){return typeof arg==="object"&&arg!==null}function isUndefined(arg){return arg===void 0}},{}],2:[function(require,module,exports){var UA,browser,mode,platform,ua;ua=navigator.userAgent.toLowerCase();platform=navigator.platform.toLowerCase();UA=ua.match(/(opera|ie|firefox|chrome|version)[\s\/:]([\w\d\.]+)?.*?(safari|version[\s\/:]([\w\d\.]+)|$)/)||[null,"unknown",0];mode=UA[1]==="ie"&&document.documentMode;browser={name:UA[1]==="version"?UA[3]:UA[1],version:mode||parseFloat(UA[1]==="opera"&&UA[4]?UA[4]:UA[2]),platform:{name:ua.match(/ip(?:ad|od|hone)/)?"ios":(ua.match(/(?:webos|android)/)||platform.match(/mac|win|linux/)||["other"])[0]}};browser[browser.name]=true;browser[browser.name+parseInt(browser.version,10)]=true;browser.platform[browser.platform.name]=true;module.exports=browser},{}],3:[function(require,module,exports){var EventEmitter,GIF,browser,extend=function(child,parent){for(var key in parent){if(hasProp.call(parent,key))child[key]=parent[key]}function ctor(){this.constructor=child}ctor.prototype=parent.prototype;child.prototype=new ctor;child.__super__=parent.prototype;return child},hasProp={}.hasOwnProperty,indexOf=[].indexOf||function(item){for(var i=0,l=this.length;i<l;i++){if(i in this&&this[i]===item)return i}return-1},slice=[].slice;EventEmitter=require("events").EventEmitter;browser=require("./browser.coffee");GIF=function(superClass){var defaults,frameDefaults;extend(GIF,superClass);defaults={workerScript:"gif.worker.js",workers:2,repeat:0,background:"#fff",quality:10,width:null,height:null,transparent:null,debug:false,dither:false};frameDefaults={delay:500,copy:false};function GIF(options){var base,key,value;this.running=false;this.options={};this.frames=[];this.freeWorkers=[];this.activeWorkers=[];this.setOptions(options);for(key in defaults){value=defaults[key];if((base=this.options)[key]==null){base[key]=value}}}GIF.prototype.setOption=function(key,value){this.options[key]=value;if(this._canvas!=null&&(key==="width"||key==="height")){return this._canvas[key]=value}};GIF.prototype.setOptions=function(options){var key,results,value;results=[];for(key in options){if(!hasProp.call(options,key))continue;value=options[key];results.push(this.setOption(key,value))}return results};GIF.prototype.addFrame=function(image,options){var frame,key;if(options==null){options={}}frame={};frame.transparent=this.options.transparent;for(key in frameDefaults){frame[key]=options[key]||frameDefaults[key]}if(this.options.width==null){this.setOption("width",image.width)}if(this.options.height==null){this.setOption("height",image.height)}if(typeof ImageData!=="undefined"&&ImageData!==null&&image instanceof ImageData){frame.data=image.data}else if(typeof CanvasRenderingContext2D!=="undefined"&&CanvasRenderingContext2D!==null&&image instanceof CanvasRenderingContext2D||typeof WebGLRenderingContext!=="undefined"&&WebGLRenderingContext!==null&&image instanceof WebGLRenderingContext){if(options.copy){frame.data=this.getContextData(image)}else{frame.context=image}}else if(image.childNodes!=null){if(options.copy){frame.data=this.getImageData(image)}else{frame.image=image}}else{throw new Error("Invalid image")}return this.frames.push(frame)};GIF.prototype.render=function(){var i,j,numWorkers,ref;if(this.running){throw new Error("Already running")}if(this.options.width==null||this.options.height==null){throw new Error("Width and height must be set prior to rendering")}this.running=true;this.nextFrame=0;this.finishedFrames=0;this.imageParts=function(){var j,ref,results;results=[];for(i=j=0,ref=this.frames.length;0<=ref?j<ref:j>ref;i=0<=ref?++j:--j){results.push(null)}return results}.call(this);numWorkers=this.spawnWorkers();if(this.options.globalPalette===true){this.renderNextFrame()}else{for(i=j=0,ref=numWorkers;0<=ref?j<ref:j>ref;i=0<=ref?++j:--j){this.renderNextFrame()}}this.emit("start");return this.emit("progress",0)};GIF.prototype.abort=function(){var worker;while(true){worker=this.activeWorkers.shift();if(worker==null){break}this.log("killing active worker");worker.terminate()}this.running=false;return this.emit("abort")};GIF.prototype.spawnWorkers=function(){var j,numWorkers,ref,results;numWorkers=Math.min(this.options.workers,this.frames.length);(function(){results=[];for(var j=ref=this.freeWorkers.length;ref<=numWorkers?j<numWorkers:j>numWorkers;ref<=numWorkers?j++:j--){results.push(j)}return results}).apply(this).forEach(function(_this){return function(i){var worker;_this.log("spawning worker "+i);worker=new Worker(_this.options.workerScript);worker.onmessage=function(event){_this.activeWorkers.splice(_this.activeWorkers.indexOf(worker),1);_this.freeWorkers.push(worker);return _this.frameFinished(event.data)};return _this.freeWorkers.push(worker)}}(this));return numWorkers};GIF.prototype.frameFinished=function(frame){var i,j,ref;this.log("frame "+frame.index+" finished - "+this.activeWorkers.length+" active");this.finishedFrames++;this.emit("progress",this.finishedFrames/this.frames.length);this.imageParts[frame.index]=frame;if(this.options.globalPalette===true){this.options.globalPalette=frame.globalPalette;this.log("global palette analyzed");if(this.frames.length>2){for(i=j=1,ref=this.freeWorkers.length;1<=ref?j<ref:j>ref;i=1<=ref?++j:--j){this.renderNextFrame()}}}if(indexOf.call(this.imageParts,null)>=0){return this.renderNextFrame()}else{return this.finishRendering()}};GIF.prototype.finishRendering=function(){var data,frame,i,image,j,k,l,len,len1,len2,len3,offset,page,ref,ref1,ref2;len=0;ref=this.imageParts;for(j=0,len1=ref.length;j<len1;j++){frame=ref[j];len+=(frame.data.length-1)*frame.pageSize+frame.cursor}len+=frame.pageSize-frame.cursor;this.log("rendering finished - filesize "+Math.round(len/1e3)+"kb");data=new Uint8Array(len);offset=0;ref1=this.imageParts;for(k=0,len2=ref1.length;k<len2;k++){frame=ref1[k];ref2=frame.data;for(i=l=0,len3=ref2.length;l<len3;i=++l){page=ref2[i];data.set(page,offset);if(i===frame.data.length-1){offset+=frame.cursor}else{offset+=frame.pageSize}}}image=new Blob([data],{type:"image/gif"});return this.emit("finished",image,data)};GIF.prototype.renderNextFrame=function(){var frame,task,worker;if(this.freeWorkers.length===0){throw new Error("No free workers")}if(this.nextFrame>=this.frames.length){return}frame=this.frames[this.nextFrame++];worker=this.freeWorkers.shift();task=this.getTask(frame);this.log("starting frame "+(task.index+1)+" of "+this.frames.length);this.activeWorkers.push(worker);return worker.postMessage(task)};GIF.prototype.getContextData=function(ctx){return ctx.getImageData(0,0,this.options.width,this.options.height).data};GIF.prototype.getImageData=function(image){var ctx;if(this._canvas==null){this._canvas=document.createElement("canvas");this._canvas.width=this.options.width;this._canvas.height=this.options.height}ctx=this._canvas.getContext("2d");ctx.setFill=this.options.background;ctx.fillRect(0,0,this.options.width,this.options.height);ctx.drawImage(image,0,0);return this.getContextData(ctx)};GIF.prototype.getTask=function(frame){var index,task;index=this.frames.indexOf(frame);task={index:index,last:index===this.frames.length-1,delay:frame.delay,transparent:frame.transparent,width:this.options.width,height:this.options.height,quality:this.options.quality,dither:this.options.dither,globalPalette:this.options.globalPalette,repeat:this.options.repeat,canTransfer:browser.name==="chrome"};if(frame.data!=null){task.data=frame.data}else if(frame.context!=null){task.data=this.getContextData(frame.context)}else if(frame.image!=null){task.data=this.getImageData(frame.image)}else{throw new Error("Invalid frame")}return task};GIF.prototype.log=function(){var args;args=1<=arguments.length?slice.call(arguments,0):[];if(!this.options.debug){return}return console.log.apply(console,args)};return GIF}(EventEmitter);module.exports=GIF},{"./browser.coffee":2,events:1}]},{},[3])(3)});
+</script>
 
 <script>
     // === 1. 系統變數 ===
@@ -274,7 +297,7 @@
         moveMode: 'none', moveDist: 400, circleRadius: 100, zigzagAmp: 50,
         rotateMode: 'none', wobble: 0, scaleMode: 'none',
         blur: 0, pixel: 1, wave: 0, noise: 0, glitch: 0, hue: 0, recursive: 0,
-        particle: 'none', particleSpeed: 0.1,
+        particle: 'none', particleSpeed: 0.1, particleLayer: 'front',
         backFaceMode: 'mirror', backFaceColor: '#ffeb3b',
         mirror: false, lake: false, lakeGap: 0, invert: false, sepia: false, grayscale: false,
         shadowType: 'none', shadowColor: '#000000', shadowBlur: 10,
@@ -365,7 +388,7 @@
             'baseScale', 'physicsMode', 'strength', 'speed', 'wobble',
             'moveMode', 'moveDist', 'circleRadius', 'zigzagAmp', 'rotateMode', 'scaleMode',
             'blur', 'pixel', 'wave', 'noise', 'glitch', 'hue', 'recursive', 'particle',
-            'backFaceMode', 'shadowType', 'shadowBlur', 'particleSpeed', 'lakeGap'
+            'backFaceMode', 'shadowType', 'shadowBlur', 'particleSpeed', 'particleLayer', 'lakeGap'
         ];
         keys.forEach(k => {
             const el = document.getElementById(k);
@@ -391,11 +414,35 @@
             const el = document.getElementById(k);
             if(el) el.checked = params[k];
         });
+
+        // 倒影間距控制區塊隨 lake 狀態顯示/隱藏
+        const lakeGapControl = document.getElementById('lakeGapControl');
+        if (lakeGapControl) lakeGapControl.style.display = params.lake ? 'grid' : 'none';
+
         const colPick = document.getElementById('backFaceColor');
         if(colPick) colPick.value = params.backFaceColor;
+        const backFaceColorText = document.getElementById('backFaceColorText');
+        if(backFaceColorText) backFaceColorText.value = params.backFaceColor;
         const shadowCol = document.getElementById('shadowColor');
         if(shadowCol) shadowCol.value = params.shadowColor;
     }
+
+    function toggleCustomBg() {
+        const show = document.getElementById('bgMode').value === 'custom';
+        document.getElementById('customBgRow').style.display = show ? '' : 'none';
+    }
+
+    function syncBgHex(val) {
+        if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+            document.getElementById('customBgColor').value = val;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('customBgColor').addEventListener('input', function() {
+            document.getElementById('customBgHex').value = this.value;
+        });
+    });
 
     function updateParam(key, value) {
         if (typeof defaultParams[key] === 'number') value = parseFloat(value);
@@ -423,13 +470,14 @@
     }
 
     // === 4. 渲染核心 (修復 Mirror/Lake) ===
-    function drawScene(t) {
+    function drawScene(t, bgFill = null) {
         const W = canvas.width;
         const H = canvas.height;
-        
-        ctx.clearRect(0, 0, W, H);
+
+        if (bgFill) { ctx.fillStyle = bgFill; ctx.fillRect(0, 0, W, H); }
+        else { ctx.clearRect(0, 0, W, H); }
         if (!isLoaded) {
-            ctx.fillStyle = '#666'; ctx.font = '16px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillStyle = '#666'; ctx.font = '16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText('請上傳靜態圖片（PNG/JPG）', W/2, H/2); return;
         }
 
@@ -437,6 +485,9 @@
         const cy = H / 2 + params.offsetY;
 
         // 核心邏輯：先決定「單體」怎麼畫，再決定「場景」怎麼擺
+
+        // 粒子在背景時，先畫粒子再畫圖片
+        if (params.particleLayer === 'behind') drawParticles(t);
 
         // 1. 畫本體 (包含 Mirror 邏輯)
         drawEntities(cx, cy, t, false);
@@ -471,8 +522,8 @@
             ctx.restore();
         }
 
-        // 3. 畫最上層粒子
-        drawParticles(t);
+        // 3. 粒子在前景時，最後畫粒子
+        if (params.particleLayer === 'front') drawParticles(t);
     }
 
     // 繪製實體 (處理 Mirror)
@@ -611,6 +662,26 @@
             // 碰壁反彈效果（簡化版）
             motionX = bounceX;
             motionY = bounceY;
+        }
+        if (params.moveMode === 'diagonalTLBR') {
+            const frac = (cycle % (2 * Math.PI)) / (2 * Math.PI);
+            motionX = (-1.2 + frac * 2.4) * canvas.width;
+            motionY = (-1.2 + frac * 2.4) * canvas.height;
+        }
+        if (params.moveMode === 'diagonalTRBL') {
+            const frac = (cycle % (2 * Math.PI)) / (2 * Math.PI);
+            motionX = (1.2 - frac * 2.4) * canvas.width;
+            motionY = (-1.2 + frac * 2.4) * canvas.height;
+        }
+        if (params.moveMode === 'diagonalBLTR') {
+            const frac = (cycle % (2 * Math.PI)) / (2 * Math.PI);
+            motionX = (-1.2 + frac * 2.4) * canvas.width;
+            motionY = (1.2 - frac * 2.4) * canvas.height;
+        }
+        if (params.moveMode === 'diagonalBRTL') {
+            const frac = (cycle % (2 * Math.PI)) / (2 * Math.PI);
+            motionX = (1.2 - frac * 2.4) * canvas.width;
+            motionY = (1.2 - frac * 2.4) * canvas.height;
         }
         if (params.rotateMode === 'spinCW') motionRot = cycle;
         if (params.rotateMode === 'spinCCW') motionRot = -cycle;
@@ -965,6 +1036,7 @@
         else if (bgMode === 'white') { transparentColor = null; bgColor = '#FFFFFF'; }
         else if (bgMode === 'black') { transparentColor = null; bgColor = '#000000'; }
         else if (bgMode === 'green') { transparentColor = null; bgColor = '#00FF00'; }
+        else if (bgMode === 'custom') { transparentColor = null; bgColor = document.getElementById('customBgHex').value || '#FFFFFF'; }
 
         // 建立 Worker Blob URL（解決 file:// CORS 問題）
         const workerBlob = new Blob([document.getElementById('worker-code').textContent], {
@@ -994,11 +1066,8 @@
         // 計算每幀時間增量：預覽是 60fps * speed，錄製要同步這個速度
         const timeIncrement = (60 * params.speed) / fps;
         function process() {
-            if (bgColor) { ctx.fillStyle = bgColor; ctx.fillRect(0, 0, canvas.width, canvas.height); }
-            else { ctx.clearRect(0,0,canvas.width, canvas.height); }
-
-            // 繪製該幀
-            drawScene(currentTime);
+            // 繪製該幀（bgColor 傳入 drawScene 確保背景在 clearRect 之後填入）
+            drawScene(currentTime, bgColor);
             currentTime += timeIncrement;
 
             gif.addFrame(ctx, {copy: true, delay: 1000/fps});

@@ -1172,37 +1172,41 @@
 
                 case 'diagonalTLBR':
                     css += `@keyframes preview-diagonalTLBR {
-                        from { left: -20%; top: -20%; }
-                        to { left: 120%; top: 120%; }
+                        from { left: -60%; top: -60%; }
+                        to { left: 160%; top: 160%; }
                     }\n`;
                     animations.push(`preview-diagonalTLBR ${speed}s linear infinite`);
+                    previewImg.style.translate = '-50% -50%';
                     previewImg.style.scale = `${flipScaleX} ${flipScaleY}`;
                     break;
 
                 case 'diagonalTRBL':
                     css += `@keyframes preview-diagonalTRBL {
-                        from { left: 120%; top: -20%; }
-                        to { left: -20%; top: 120%; }
+                        from { left: 160%; top: -60%; }
+                        to { left: -60%; top: 160%; }
                     }\n`;
                     animations.push(`preview-diagonalTRBL ${speed}s linear infinite`);
+                    previewImg.style.translate = '-50% -50%';
                     previewImg.style.scale = `${flipScaleX} ${flipScaleY}`;
                     break;
 
                 case 'diagonalBLTR':
                     css += `@keyframes preview-diagonalBLTR {
-                        from { left: -20%; top: 120%; }
-                        to { left: 120%; top: -20%; }
+                        from { left: -60%; top: 160%; }
+                        to { left: 160%; top: -60%; }
                     }\n`;
                     animations.push(`preview-diagonalBLTR ${speed}s linear infinite`);
+                    previewImg.style.translate = '-50% -50%';
                     previewImg.style.scale = `${flipScaleX} ${flipScaleY}`;
                     break;
 
                 case 'diagonalBRTL':
                     css += `@keyframes preview-diagonalBRTL {
-                        from { left: 120%; top: 120%; }
-                        to { left: -20%; top: -20%; }
+                        from { left: 160%; top: 160%; }
+                        to { left: -60%; top: -60%; }
                     }\n`;
                     animations.push(`preview-diagonalBRTL ${speed}s linear infinite`);
+                    previewImg.style.translate = '-50% -50%';
                     previewImg.style.scale = `${flipScaleX} ${flipScaleY}`;
                     break;
 
@@ -2020,34 +2024,38 @@
 
             case 'diagonalTLBR':
                 movementKeyframes = `@keyframes ${animationName} {
-                    from { left: -20%; top: -20%; }
-                    to { left: 120%; top: 120%; }
+                    from { left: -60%; top: -60%; }
+                    to { left: 160%; top: 160%; }
                 }`;
                 animations.push(`${animationName} ${duration} linear infinite`);
+                img.style.transform = 'translate(-50%, -50%) ' + flipTransform;
                 break;
 
             case 'diagonalTRBL':
                 movementKeyframes = `@keyframes ${animationName} {
-                    from { left: 120%; top: -20%; }
-                    to { left: -20%; top: 120%; }
+                    from { left: 160%; top: -60%; }
+                    to { left: -60%; top: 160%; }
                 }`;
                 animations.push(`${animationName} ${duration} linear infinite`);
+                img.style.transform = 'translate(-50%, -50%) ' + flipTransform;
                 break;
 
             case 'diagonalBLTR':
                 movementKeyframes = `@keyframes ${animationName} {
-                    from { left: -20%; top: 120%; }
-                    to { left: 120%; top: -20%; }
+                    from { left: -60%; top: 160%; }
+                    to { left: 160%; top: -60%; }
                 }`;
                 animations.push(`${animationName} ${duration} linear infinite`);
+                img.style.transform = 'translate(-50%, -50%) ' + flipTransform;
                 break;
 
             case 'diagonalBRTL':
                 movementKeyframes = `@keyframes ${animationName} {
-                    from { left: 120%; top: 120%; }
-                    to { left: -20%; top: -20%; }
+                    from { left: 160%; top: 160%; }
+                    to { left: -60%; top: -60%; }
                 }`;
                 animations.push(`${animationName} ${duration} linear infinite`);
+                img.style.transform = 'translate(-50%, -50%) ' + flipTransform;
                 break;
 
             case 'circle':
