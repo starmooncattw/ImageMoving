@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Moving Tools - 圖片動畫工具集</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: #0d0d0d;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            width: 100%;
+            padding: 60px 20px 40px;
+            text-align: center;
+            background: linear-gradient(180deg, #1a1a2e 0%, #0d0d0d 100%);
+        }
+
+        header h1 {
+            font-size: 2.4rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, #a78bfa, #60a5fa, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+        }
+
+        header p {
+            color: #888;
+            font-size: 1rem;
+            letter-spacing: 1px;
+        }
+
+        .cards {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 32px;
+            justify-content: center;
+            padding: 50px 24px;
+            max-width: 960px;
+            width: 100%;
+        }
+
+        .card {
+            background: #161616;
+            border: 1px solid #2a2a2a;
+            border-radius: 16px;
+            width: 420px;
+            overflow: hidden;
+            transition: border-color 0.25s, transform 0.2s, box-shadow 0.25s;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card:hover {
+            border-color: var(--accent);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+        }
+
+        .card-header {
+            padding: 28px 28px 20px;
+            border-bottom: 1px solid #222;
+            background: linear-gradient(135deg, var(--bg-from), var(--bg-to));
+        }
+
+        .card-icon {
+            font-size: 2.8rem;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+
+        .card-subtitle {
+            font-size: 0.82rem;
+            color: var(--accent);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .card-body {
+            padding: 24px 28px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .card-desc {
+            color: #aaa;
+            font-size: 0.92rem;
+            line-height: 1.7;
+        }
+
+        .feature-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .feature-list li {
+            font-size: 0.85rem;
+            color: #ccc;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .feature-list li::before {
+            content: '▸';
+            color: var(--accent);
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .card-footer {
+            padding: 18px 28px;
+            border-top: 1px solid #222;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .badge {
+            font-size: 0.72rem;
+            padding: 3px 10px;
+            border-radius: 20px;
+            background: #1e1e1e;
+            border: 1px solid #333;
+            color: #888;
+        }
+
+        .btn-enter {
+            font-size: 0.85rem;
+            padding: 8px 20px;
+            border-radius: 8px;
+            background: var(--accent);
+            color: #000;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+
+        .btn-enter:hover { opacity: 0.85; }
+
+        .card-animation { --accent: #a78bfa; --bg-from: #1e1628; --bg-to: #161620; }
+        .card-physics   { --accent: #34d399; --bg-from: #0f2420; --bg-to: #101a16; }
+
+        footer {
+            margin-top: auto;
+            padding: 32px 20px;
+            text-align: center;
+            color: #444;
+            font-size: 0.8rem;
+            border-top: 1px solid #1a1a1a;
+            width: 100%;
+        }
+
+        footer span { color: #666; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Image Moving Tools</h1>
+    <p>純前端・免安裝・無需上傳 — 全程在瀏覽器本機執行</p>
+</header>
+
+<div class="cards">
+
+    <!-- Animation HTML Generator -->
+    <a class="card card-animation" href="AnimationHTML_Generator.html">
+        <div class="card-header">
+            <span class="card-icon">🎨</span>
+            <div class="card-title">Animation HTML Generator</div>
+            <div class="card-subtitle">動畫 HTML 產生器</div>
+        </div>
+        <div class="card-body">
+            <p class="card-desc">
+                上傳圖片，自由組合移動路徑、旋轉、縮放、濾鏡與粒子特效，
+                最後匯出一個可直接分享的 <strong style="color:#fff">獨立 HTML 動畫檔</strong>。
+            </p>
+            <ul class="feature-list">
+                <li>14 種移動模式：水平、垂直、對角線、圓周、之字形…</li>
+                <li>旋轉、縮放、位移、搖晃等獨立動畫軸</li>
+                <li>高斯模糊、動態模糊、投影、發光等濾鏡</li>
+                <li>前/後景粒子特效（雪花、閃爍、飄移等）</li>
+                <li>輸出成完整 HTML 檔，可直接放網頁或分享</li>
+            </ul>
+        </div>
+        <div class="card-footer">
+            <span class="badge">輸出 HTML</span>
+            <span class="btn-enter">進入工具 →</span>
+        </div>
+    </a>
+
+    <!-- Physics GIF Studio -->
+    <a class="card card-physics" href="PhysicsGIF_Studio.html">
+        <div class="card-header">
+            <span class="card-icon">⚗️</span>
+            <div class="card-title">Physics GIF Studio</div>
+            <div class="card-subtitle">物理 GIF 工作室</div>
+        </div>
+        <div class="card-body">
+            <p class="card-desc">
+                上傳圖片，套用物理重力、碰撞彈跳、倒影、粒子等動態效果，
+                即時預覽後錄製成可直接使用的 <strong style="color:#fff">GIF 動圖</strong>。
+            </p>
+            <ul class="feature-list">
+                <li>物理重力、彈跳、旋轉等動態效果</li>
+                <li>倒影、鏡像合成效果</li>
+                <li>粒子系統：飄落、軌跡、爆散</li>
+                <li>自訂畫布尺寸、幀率與錄製時長</li>
+                <li>輸出成 GIF，可直接嵌入貼文、訊息或網頁</li>
+            </ul>
+        </div>
+        <div class="card-footer">
+            <span class="badge">輸出 GIF</span>
+            <span class="btn-enter">進入工具 →</span>
+        </div>
+    </a>
+
+</div>
+
+<footer>
+    <span>所有處理皆在瀏覽器本機完成，圖片不會上傳至任何伺服器。</span>
+</footer>
+
+</body>
+</html>
