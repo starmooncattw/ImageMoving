@@ -122,10 +122,12 @@ header h1{font-size:1.2rem;font-weight:700;background:linear-gradient(135deg,#a7
   <div class="strip-toolbar">
     <span>幀列表</span>
     <span id="frameCount" class="frame-count"></span>
+    <button class="btn small" id="btnUndo" onclick="undo()" disabled>↩ 復原</button>
     <button class="btn small" onclick="moveFrame(-1)">← 前移</button>
     <button class="btn small" onclick="moveFrame(1)">後移 →</button>
     <button class="btn small" onclick="duplicateFrame()">複製幀</button>
     <button class="btn small danger" onclick="deleteFrame()">刪除幀</button>
+    <button class="btn small" onclick="reverseFrames()">⇄ 反轉順序</button>
     <button class="btn small primary" onclick="openFrameManager()" style="margin-left:8px">🗂 幀管理器</button>
   </div>
 
@@ -143,6 +145,7 @@ header h1{font-size:1.2rem;font-weight:700;background:linear-gradient(135deg,#a7
         <button class="btn small" onclick="fmSelectNone()">清除</button>
         <button class="btn small danger" onclick="fmDeleteSelected()">刪除選取</button>
         <button class="btn small" onclick="fmDuplicateSelected()">複製選取</button>
+        <button class="btn small" id="fmBtnUndo" onclick="undo()" disabled>↩ 復原</button>
         <button class="btn small" style="background:#111;border-color:#555;color:#aaa" onclick="closeFrameManager()">✕ 關閉</button>
       </div>
       <div id="fmGrid"></div>
@@ -182,54 +185,6 @@ header h1{font-size:1.2rem;font-weight:700;background:linear-gradient(135deg,#a7
         <div class="btn-row">
           <button class="btn" onclick="applyDelay(false)">套用本幀</button>
           <button class="btn" onclick="applyDelay(true)">套用全部</button>
-        </div>
-      </div>
-
-      <!-- 文字疊加 -->
-      <div class="ctrl-group">
-        <h3>文字疊加</h3>
-        <div class="ctrl-row">
-          <label>文字</label>
-          <input type="text" id="txtText" class="full" placeholder="輸入文字...">
-        </div>
-        <div class="ctrl-row">
-          <label>大小</label>
-          <input type="number" id="txtSize" value="24" min="8" max="200" style="width:64px">
-          <label style="min-width:32px">顏色</label>
-          <input type="color" id="txtColor" value="#ffffff">
-        </div>
-        <div class="ctrl-row">
-          <label>X %</label>
-          <input type="range" id="txtX" min="0" max="100" value="50" oninput="updateLabel('txtX','txtXVal')">
-          <span class="val-label" id="txtXVal">50</span>
-        </div>
-        <div class="ctrl-row">
-          <label>Y %</label>
-          <input type="range" id="txtY" min="0" max="100" value="50" oninput="updateLabel('txtY','txtYVal')">
-          <span class="val-label" id="txtYVal">50</span>
-        </div>
-        <div class="btn-row">
-          <button class="btn" onclick="applyText(false)">套用本幀</button>
-          <button class="btn" onclick="applyText(true)">套用全部</button>
-        </div>
-      </div>
-
-      <!-- 亮度/對比 -->
-      <div class="ctrl-group">
-        <h3>亮度 / 對比</h3>
-        <div class="ctrl-row">
-          <label>亮度</label>
-          <input type="range" id="slBrightness" min="-100" max="100" value="0" oninput="updateLabel('slBrightness','slBrightnessVal')">
-          <span class="val-label" id="slBrightnessVal">0</span>
-        </div>
-        <div class="ctrl-row">
-          <label>對比</label>
-          <input type="range" id="slContrast" min="-100" max="100" value="0" oninput="updateLabel('slContrast','slContrastVal')">
-          <span class="val-label" id="slContrastVal">0</span>
-        </div>
-        <div class="btn-row">
-          <button class="btn" onclick="applyFilter(false)">套用本幀</button>
-          <button class="btn" onclick="applyFilter(true)">套用全部</button>
         </div>
       </div>
 
@@ -1185,11 +1140,20 @@ function renderFrameStrip() {
             e.preventDefault();
             div.classList.remove('drag-over');
             if (dragSrcIndex !== i) {
-                const [f] = frames.splice(dragSrcIndex, 1);
-                frames.splice(i, 0, f);
-                selectedIndex = i;
-                renderFrameStrip();
-                renderPreview();
+                const from = dragSrcIndex, to = i;
+                const exec = () => {
+                    const [f] = frames.splice(from, 1);
+                    frames.splice(to, 0, f);
+                    selectedIndex = to;
+                    renderFrameStrip(); renderPreview();
+                };
+                pushCmd({ exec, undo() {
+                    const [f] = frames.splice(to, 1);
+                    frames.splice(from, 0, f);
+                    selectedIndex = from;
+                    renderFrameStrip(); renderPreview();
+                }});
+                exec();
             }
         });
 
@@ -1253,94 +1217,96 @@ function stepFrame(dir) {
 }
 
 // ── Frame operations ───────────────────────────────
-function deleteFrame() {
-    if (frames.length <= 1) { alert('至少保留一幀'); return; }
-    frames.splice(selectedIndex, 1);
-    if (selectedIndex >= frames.length) selectedIndex = frames.length - 1;
-    renderFrameStrip();
-    renderPreview();
+// ── Undo / Redo ────────────────────────────────────
+const MAX_HISTORY = 10;
+const cmdHistory = [];
+
+function pushCmd(cmd) {
+    cmdHistory.push(cmd);
+    if (cmdHistory.length > MAX_HISTORY) cmdHistory.shift();
+    updateUndoBtns();
 }
-function duplicateFrame() {
-    const f = frames[selectedIndex];
+function undo() {
+    if (!cmdHistory.length) return;
+    cmdHistory.pop().undo();
+    updateUndoBtns();
+}
+function updateUndoBtns() {
+    const canUndo = cmdHistory.length > 0;
+    document.getElementById('btnUndo').disabled = !canUndo;
+    const fu = document.getElementById('fmBtnUndo');
+    if (fu) fu.disabled = !canUndo;
+}
+
+function cloneFrame(f) {
     const nc = document.createElement('canvas');
     nc.width = f.canvas.width; nc.height = f.canvas.height;
     nc.getContext('2d').drawImage(f.canvas, 0, 0);
-    frames.splice(selectedIndex + 1, 0, { canvas: nc, delay: f.delay });
-    selectedIndex++;
-    renderFrameStrip();
-    renderPreview();
+    return { canvas: nc, delay: f.delay };
 }
+
+document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
+});
+
+function deleteFrame() {
+    if (frames.length <= 1) { alert('至少保留一幀'); return; }
+    const idx = selectedIndex;
+    const saved = frames[idx];
+    const exec = () => {
+        frames.splice(idx, 1);
+        selectedIndex = Math.min(idx, frames.length - 1);
+        renderFrameStrip(); renderPreview();
+    };
+    pushCmd({ exec, undo() { frames.splice(idx, 0, saved); selectedIndex = idx; renderFrameStrip(); renderPreview(); } });
+    exec();
+}
+
+function duplicateFrame() {
+    const idx = selectedIndex;
+    const newFrame = cloneFrame(frames[idx]);
+    const exec = () => {
+        frames.splice(idx + 1, 0, newFrame);
+        selectedIndex = idx + 1;
+        renderFrameStrip(); renderPreview();
+    };
+    pushCmd({ exec, undo() { frames.splice(idx + 1, 1); selectedIndex = idx; renderFrameStrip(); renderPreview(); } });
+    exec();
+}
+
 function moveFrame(dir) {
-    const dest = selectedIndex + dir;
-    if (dest < 0 || dest >= frames.length) return;
-    const [f] = frames.splice(selectedIndex, 1);
-    frames.splice(dest, 0, f);
-    selectedIndex = dest;
-    renderFrameStrip();
-    renderPreview();
+    const from = selectedIndex;
+    const to = from + dir;
+    if (to < 0 || to >= frames.length) return;
+    const exec = () => {
+        const [f] = frames.splice(from, 1);
+        frames.splice(to, 0, f);
+        selectedIndex = to;
+        renderFrameStrip(); renderPreview();
+    };
+    pushCmd({ exec, undo() {
+        const [f] = frames.splice(to, 1);
+        frames.splice(from, 0, f);
+        selectedIndex = from;
+        renderFrameStrip(); renderPreview();
+    }});
+    exec();
+}
+
+function reverseFrames() {
+    const exec = () => { frames.reverse(); selectedIndex = 0; renderFrameStrip(); renderPreview(); };
+    pushCmd({ exec, undo: exec });
+    exec();
 }
 
 // ── Delay ──────────────────────────────────────────
 function applyDelay(toAll) {
     const ms = Math.max(20, parseInt(document.getElementById('frameDelay').value) || 100);
-    if (toAll) frames.forEach(f => f.delay = ms);
-    else frames[selectedIndex].delay = ms;
-    renderFrameStrip();
-    renderPreview();
-}
-
-// ── Text overlay ───────────────────────────────────
-function applyText(toAll) {
-    const text  = document.getElementById('txtText').value;
-    if (!text.trim()) return;
-    const size  = parseInt(document.getElementById('txtSize').value)  || 24;
-    const color = document.getElementById('txtColor').value;
-    const xPct  = parseInt(document.getElementById('txtX').value) / 100;
-    const yPct  = parseInt(document.getElementById('txtY').value) / 100;
-
-    const draw = c => {
-        const ctx = c.getContext('2d');
-        ctx.font = 'bold ' + size + 'px sans-serif';
-        ctx.fillStyle = color;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(text, c.width * xPct, c.height * yPct);
-    };
-    if (toAll) frames.forEach(f => draw(f.canvas));
-    else draw(frames[selectedIndex].canvas);
-    renderFrameStrip();
-    renderPreview();
-}
-
-// ── Brightness / Contrast ──────────────────────────
-function applyFilter(toAll) {
-    const brightness = parseInt(document.getElementById('slBrightness').value);
-    const contrast   = parseInt(document.getElementById('slContrast').value);
-
-    const process = c => {
-        const ctx = c.getContext('2d');
-        const id  = ctx.getImageData(0, 0, c.width, c.height);
-        const d   = id.data;
-        const b   = 1 + brightness / 100;
-        const cf  = (259 * (contrast + 255)) / (255 * (259 - contrast));
-        for (let i = 0; i < d.length; i += 4) {
-            d[i]   = Math.min(255, Math.max(0, cf * (d[i]   * b - 128) + 128));
-            d[i+1] = Math.min(255, Math.max(0, cf * (d[i+1] * b - 128) + 128));
-            d[i+2] = Math.min(255, Math.max(0, cf * (d[i+2] * b - 128) + 128));
-        }
-        ctx.putImageData(id, 0, 0);
-    };
-    if (toAll) frames.forEach(f => process(f.canvas));
-    else process(frames[selectedIndex].canvas);
-
-    // Reset sliders
-    document.getElementById('slBrightness').value = 0;
-    document.getElementById('slContrast').value   = 0;
-    document.getElementById('slBrightnessVal').textContent = '0';
-    document.getElementById('slContrastVal').textContent   = '0';
-
-    renderFrameStrip();
-    renderPreview();
+    const targets = toAll ? frames.map((_, i) => i) : [selectedIndex];
+    const oldDelays = targets.map(i => frames[i].delay);
+    const exec = () => { targets.forEach(i => frames[i].delay = ms); renderFrameStrip(); renderPreview(); };
+    pushCmd({ exec, undo() { targets.forEach((i, j) => frames[i].delay = oldDelays[j]); renderFrameStrip(); renderPreview(); } });
+    exec();
 }
 
 // ── Output size ────────────────────────────────────
@@ -1504,41 +1470,57 @@ function updateFmInfo() {
 function fmDeleteSelected() {
     if (!fmSelected.size) return;
     if (frames.length - fmSelected.size < 1) { alert('至少保留一幀'); return; }
-    const indices = [...fmSelected].sort((a, b) => b - a);
-    indices.forEach(i => frames.splice(i, 1));
-    fmSelected.clear();
-    fmLastClick = -1;
-    if (selectedIndex >= frames.length) selectedIndex = frames.length - 1;
-    renderFmGrid();
+    const saved = [...fmSelected].sort((a, b) => a - b).map(i => ({ idx: i, frame: frames[i] }));
+    const exec = () => {
+        [...fmSelected].sort((a, b) => b - a).forEach(i => frames.splice(i, 1));
+        fmSelected.clear(); fmLastClick = -1;
+        if (selectedIndex >= frames.length) selectedIndex = frames.length - 1;
+        renderFmGrid(); renderFrameStrip();
+    };
+    pushCmd({ exec, undo() {
+        saved.forEach(({ idx, frame }) => frames.splice(idx, 0, frame));
+        renderFmGrid(); renderFrameStrip(); renderPreview();
+    }});
+    exec();
 }
 
 function fmDuplicateSelected() {
     if (!fmSelected.size) return;
     const indices = [...fmSelected].sort((a, b) => a - b);
+    const newFrames = [];
     let offset = 0;
-    indices.forEach(i => {
-        const f = frames[i + offset];
-        const nc = document.createElement('canvas');
-        nc.width = f.canvas.width; nc.height = f.canvas.height;
-        nc.getContext('2d').drawImage(f.canvas, 0, 0);
-        frames.splice(i + offset + 1, 0, { canvas: nc, delay: f.delay });
-        offset++;
-    });
-    fmSelected.clear();
-    renderFmGrid();
+    const exec = () => {
+        offset = 0; newFrames.length = 0;
+        indices.forEach(i => {
+            const nf = cloneFrame(frames[i + offset]);
+            frames.splice(i + offset + 1, 0, nf);
+            newFrames.push(i + offset + 1);
+            offset++;
+        });
+        fmSelected.clear(); renderFmGrid();
+    };
+    pushCmd({ exec, undo() {
+        [...newFrames].sort((a, b) => b - a).forEach(i => frames.splice(i, 1));
+        renderFmGrid(); renderFrameStrip();
+    }});
+    exec();
 }
 
 function fmApplyDelay() {
     if (!fmSelected.size) return;
     const ms = Math.max(20, parseInt(document.getElementById('fmDelay').value) || 100);
-    fmSelected.forEach(i => frames[i].delay = ms);
-    renderFmGrid();
+    const targets = [...fmSelected];
+    const oldDelays = targets.map(i => frames[i].delay);
+    const exec = () => { targets.forEach(i => frames[i].delay = ms); renderFmGrid(); };
+    pushCmd({ exec, undo() { targets.forEach((i, j) => frames[i].delay = oldDelays[j]); renderFmGrid(); } });
+    exec();
 }
 
 // ── Helpers ────────────────────────────────────────
 function updateLabel(inputId, labelId) {
     document.getElementById(labelId).textContent = document.getElementById(inputId).value;
 }
+
 </script>
 </body>
 </html>
