@@ -2697,29 +2697,36 @@ if (config.effects.particle.enabled) {
                 document.getElementById('fade').checked = config.movement.fade || false;
 
                 if (config.movement.horizontalPosition) {
-                    document.querySelector(`input[name="horizontalPosition"][value="${config.movement.horizontalPosition}"]`).checked = true;
+                    const el = document.querySelector(`input[name="horizontalPosition"][value="${CSS.escape(config.movement.horizontalPosition)}"]`);
+                    if (el) el.checked = true;
                 }
                 if (config.movement.horizontalLoopPosition) {
-                    document.querySelector(`input[name="horizontalLoopPosition"][value="${config.movement.horizontalLoopPosition}"]`).checked = true;
+                    const el = document.querySelector(`input[name="horizontalLoopPosition"][value="${CSS.escape(config.movement.horizontalLoopPosition)}"]`);
+                    if (el) el.checked = true;
                 }
                 if (config.movement.verticalPosition) {
-                    document.querySelector(`input[name="verticalPosition"][value="${config.movement.verticalPosition}"]`).checked = true;
+                    const el = document.querySelector(`input[name="verticalPosition"][value="${CSS.escape(config.movement.verticalPosition)}"]`);
+                    if (el) el.checked = true;
                 }
                 if (config.movement.verticalLoopPosition) {
-                    document.querySelector(`input[name="verticalLoopPosition"][value="${config.movement.verticalLoopPosition}"]`).checked = true;
+                    const el = document.querySelector(`input[name="verticalLoopPosition"][value="${CSS.escape(config.movement.verticalLoopPosition)}"]`);
+                    if (el) el.checked = true;
                 }
                 if (config.movement.horizontalLoopStart) {
-                    document.querySelector(`input[name="horizontalLoopStart"][value="${config.movement.horizontalLoopStart}"]`).checked = true;
+                    const el = document.querySelector(`input[name="horizontalLoopStart"][value="${CSS.escape(config.movement.horizontalLoopStart)}"]`);
+                    if (el) el.checked = true;
                 }
                 if (config.movement.verticalLoopStart) {
-                    document.querySelector(`input[name="verticalLoopStart"][value="${config.movement.verticalLoopStart}"]`).checked = true;
+                    const el = document.querySelector(`input[name="verticalLoopStart"][value="${CSS.escape(config.movement.verticalLoopStart)}"]`);
+                    if (el) el.checked = true;
                 }
                 if (config.movement.circleRadius) {
                     document.getElementById('circleRadius').value = config.movement.circleRadius;
                     document.getElementById('circleRadius').dispatchEvent(new Event('input'));
                 }
                 if (config.movement.circleCenter) {
-                    document.querySelector(`input[name="circleCenter"][value="${config.movement.circleCenter}"]`).checked = true;
+                    const el = document.querySelector(`input[name="circleCenter"][value="${CSS.escape(config.movement.circleCenter)}"]`);
+                    if (el) el.checked = true;
                 }
 
                 updatePositionVisibility();
@@ -2727,7 +2734,8 @@ if (config.effects.particle.enabled) {
 
             // 載入翻轉設定
             if (config.flip) {
-                document.querySelector(`input[name="flip"][value="${config.flip}"]`).checked = true;
+                const el = document.querySelector(`input[name="flip"][value="${CSS.escape(config.flip)}"]`);
+                if (el) el.checked = true;
             }
 
             // 載入特效設定
