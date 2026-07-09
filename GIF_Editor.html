@@ -92,6 +92,8 @@ header h1{font-size:1.2rem;font-weight:700;background:linear-gradient(135deg,#a7
 .fm-item .fm-lbl{font-size:0.68rem;color:#888;white-space:nowrap}
 .fm-item .fm-check{position:absolute;top:4px;right:4px;width:16px;height:16px;border-radius:50%;border:2px solid #444;background:#111;display:flex;align-items:center;justify-content:center;font-size:10px;color:transparent;transition:all .1s}
 .fm-item.fm-selected .fm-check{border-color:#60a5fa;background:#60a5fa;color:#000}
+.fm-item.fm-dragging{opacity:0.35}
+.fm-item.fm-drop-target{border-left:3px solid #60a5fa;border-radius:4px}
 #fmFooter{padding:12px 18px;border-top:1px solid #1e1e1e;display:flex;gap:8px;flex-wrap:wrap;align-items:center;flex-shrink:0}
 #fmDelayRow{display:flex;align-items:center;gap:6px;margin-left:auto}
 #fmDelayRow label{font-size:0.78rem;color:#aaa}
@@ -130,6 +132,7 @@ header h1{font-size:1.2rem;font-weight:700;background:linear-gradient(135deg,#a7
     <button class="btn small" onclick="duplicateFrame()">複製幀</button>
     <button class="btn small danger" onclick="deleteFrame()">刪除幀</button>
     <button class="btn small" onclick="reverseFrames()">⇄ 反轉順序</button>
+    <button class="btn small" onclick="fmInsertGIF()">↑ 串接 GIF</button>
     <button class="btn small primary" onclick="openFrameManager()" style="margin-left:8px">🗂 幀管理器</button>
   </div>
 
@@ -145,10 +148,13 @@ header h1{font-size:1.2rem;font-weight:700;background:linear-gradient(135deg,#a7
         <button class="btn small" onclick="fmSelectAll()">全選</button>
         <button class="btn small" onclick="fmInvert()">反選</button>
         <button class="btn small" onclick="fmSelectNone()">清除</button>
+        <button class="btn small" onclick="fmMoveSelected(-1)">← 前移</button>
+        <button class="btn small" onclick="fmMoveSelected(1)">後移 →</button>
         <button class="btn small danger" onclick="fmDeleteSelected()">刪除選取</button>
         <button class="btn small" onclick="fmDuplicateSelected()">複製選取</button>
         <button class="btn small primary" onclick="fmDownloadSelected()">↓ 下載選取</button>
         <button class="btn small" onclick="fmInsertImages()">↑ 插入圖片</button>
+        <button class="btn small" onclick="fmInsertGIF()">↑ 串接 GIF</button>
         <button class="btn small" id="fmBtnUndo" onclick="undo()" disabled>↩ 復原</button>
         <button class="btn small" style="background:#111;border-color:#555;color:#aaa" onclick="closeFrameManager()">✕ 關閉</button>
       </div>
@@ -1072,6 +1078,12 @@ uploadArea.addEventListener('drop', e => {
     if (f && f.type === 'image/gif') loadGIF(f);
 });
 fileInput.addEventListener('change', e => { if (e.target.files[0]) loadGIF(e.target.files[0]); });
+
+document.getElementById('frameStrip').addEventListener('wheel', e => {
+    if (e.deltaY === 0) return;
+    e.preventDefault();
+    e.currentTarget.scrollLeft += e.deltaY;
+}, { passive: false });
 uploadArea.addEventListener('click', e => { if (e.target !== document.querySelector('.btn-upload')) fileInput.click(); });
 
 // ── Load GIF ───────────────────────────────────────
@@ -1496,6 +1508,7 @@ function exportGIF() {
 // ── Frame Manager Modal ────────────────────────────
 let fmSelected = new Set();
 let fmLastClick = -1;
+let fmDragSrc = -1;
 
 function openFrameManager() {
     fmSelected.clear();
@@ -1539,6 +1552,34 @@ function renderFmGrid() {
         div.appendChild(th);
         div.appendChild(lbl);
         div.addEventListener('click', e => fmItemClick(i, e));
+
+        div.draggable = true;
+        div.addEventListener('dragstart', e => {
+            if (!fmSelected.has(i)) { fmSelected.clear(); fmSelected.add(i); renderFmGrid(); }
+            fmDragSrc = i;
+            e.dataTransfer.effectAllowed = 'move';
+            setTimeout(() => div.classList.add('fm-dragging'), 0);
+        });
+        div.addEventListener('dragend', () => {
+            grid.querySelectorAll('.fm-dragging,.fm-drop-target').forEach(el => {
+                el.classList.remove('fm-dragging', 'fm-drop-target');
+            });
+        });
+        div.addEventListener('dragover', e => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            if (fmSelected.has(i)) return;
+            grid.querySelectorAll('.fm-drop-target').forEach(el => el.classList.remove('fm-drop-target'));
+            div.classList.add('fm-drop-target');
+        });
+        div.addEventListener('dragleave', () => div.classList.remove('fm-drop-target'));
+        div.addEventListener('drop', e => {
+            e.preventDefault();
+            div.classList.remove('fm-drop-target');
+            if (fmDragSrc === i || fmSelected.has(i)) return;
+            fmMoveSelectedTo(i);
+        });
+
         grid.appendChild(div);
     });
     updateFmInfo();
@@ -1737,6 +1778,171 @@ function fmInsertImages() {
         });
     };
     input.click();
+}
+
+function fmMoveSelectedTo(target) {
+    const selected = [...fmSelected].sort((a, b) => a - b);
+    if (!selected.length || fmSelected.has(target)) return;
+
+    const snapshot = [...frames];
+    const snapSel  = new Set(fmSelected);
+
+    const exec = () => {
+        const moved = selected.map(i => frames[i]);
+        const beforeTarget = selected.filter(i => i < target).length;
+        const insertAt = target - beforeTarget;
+        [...selected].reverse().forEach(i => frames.splice(i, 1));
+        frames.splice(insertAt, 0, ...moved);
+        fmSelected.clear();
+        moved.forEach((_, j) => fmSelected.add(insertAt + j));
+        renderFmGrid(); renderFrameStrip();
+    };
+    pushCmd({ exec, undo() {
+        frames.length = 0; frames.push(...snapshot);
+        fmSelected.clear(); snapSel.forEach(i => fmSelected.add(i));
+        renderFmGrid(); renderFrameStrip();
+    }});
+    exec();
+}
+
+function fmMoveSelected(dir) {
+    if (!fmSelected.size) return;
+    const indices = [...fmSelected].sort((a, b) => dir < 0 ? a - b : b - a);
+    // 邊界檢查：前移時最小索引不能為 0，後移時最大索引不能為末尾
+    if (dir < 0 && Math.min(...indices) === 0) return;
+    if (dir > 0 && Math.max(...indices) === frames.length - 1) return;
+
+    const exec = () => {
+        indices.forEach(i => {
+            const to = i + dir;
+            const [f] = frames.splice(i, 1);
+            frames.splice(to, 0, f);
+        });
+        fmSelected.clear();
+        indices.forEach(i => fmSelected.add(i + dir));
+        renderFmGrid(); renderFrameStrip();
+    };
+    pushCmd({ exec, undo() {
+        [...indices].sort((a, b) => dir < 0 ? b - a : a - b).forEach(i => {
+            const to = i + dir;
+            const [f] = frames.splice(to, 1);
+            frames.splice(i, 0, f);
+        });
+        fmSelected.clear();
+        indices.forEach(i => fmSelected.add(i));
+        renderFmGrid(); renderFrameStrip();
+    }});
+    exec();
+}
+
+function fmInsertGIF() {
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = 'image/gif';
+    input.onchange = async () => {
+        const file = input.files[0];
+        if (!file) return;
+        try {
+            const buf = await file.arrayBuffer();
+            const gr = new GifReader(new Uint8Array(buf));
+            const W = gr.width, H = gr.height;
+            const srcW = gifWidth, srcH = gifHeight;
+
+            // 解碼所有幀
+            const compositePixels = new Uint8ClampedArray(W * H * 4);
+            const savedPixels     = new Uint8ClampedArray(W * H * 4);
+            const rawFrames = [];
+            for (let i = 0; i < gr.numFrames(); i++) {
+                const info = gr.frameInfo(i);
+                if (i > 0) {
+                    const prev = gr.frameInfo(i - 1);
+                    if (prev.disposal === 2) {
+                        for (let py = prev.y; py < prev.y + prev.height; py++) {
+                            const s = (py * W + prev.x) * 4;
+                            compositePixels.fill(0, s, s + prev.width * 4);
+                        }
+                    } else if (prev.disposal === 3) {
+                        compositePixels.set(savedPixels);
+                    }
+                }
+                if (info.disposal === 3) savedPixels.set(compositePixels);
+                gr.decodeAndBlitFrameRGBA(i, compositePixels);
+                const c = document.createElement('canvas');
+                c.width = W; c.height = H;
+                c.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(compositePixels), W, H), 0, 0);
+                rawFrames.push({ canvas: c, delay: Math.max((info.delay || 10) * 10, 1) });
+            }
+
+            // 尺寸相同直接插入
+            let newFrames;
+            if (W === srcW && H === srcH) {
+                newFrames = rawFrames;
+            } else {
+                const choice = await _showDimDialog(W, H, srcW, srcH);
+                if (choice === null) return;
+                newFrames = rawFrames.map(f => {
+                    const c = document.createElement('canvas');
+                    c.width = srcW; c.height = srcH;
+                    const ctx = c.getContext('2d');
+                    if (choice === 'stretch') {
+                        ctx.drawImage(f.canvas, 0, 0, srcW, srcH);
+                    } else if (choice === 'fit') {
+                        const scale = Math.min(srcW / W, srcH / H);
+                        const dw = Math.round(W * scale), dh = Math.round(H * scale);
+                        const dx = Math.round((srcW - dw) / 2), dy = Math.round((srcH - dh) / 2);
+                        ctx.drawImage(f.canvas, dx, dy, dw, dh);
+                    } else { // crop
+                        const scale = Math.max(srcW / W, srcH / H);
+                        const dw = Math.round(W * scale), dh = Math.round(H * scale);
+                        const dx = Math.round((srcW - dw) / 2), dy = Math.round((srcH - dh) / 2);
+                        ctx.drawImage(f.canvas, dx, dy, dw, dh);
+                    }
+                    return { canvas: c, delay: f.delay };
+                });
+            }
+
+            const insertAt = fmSelected.size > 0 ? Math.max(...fmSelected) + 1 : frames.length;
+            const exec = () => {
+                frames.splice(insertAt, 0, ...newFrames);
+                fmSelected.clear();
+                newFrames.forEach((_, j) => fmSelected.add(insertAt + j));
+                renderFmGrid(); renderFrameStrip();
+            };
+            pushCmd({ exec, undo() {
+                frames.splice(insertAt, newFrames.length);
+                fmSelected.clear(); renderFmGrid(); renderFrameStrip();
+            }});
+            exec();
+        } catch (err) {
+            alert('GIF 載入失敗：' + (err.message || err));
+        }
+    };
+    input.click();
+}
+
+function _showDimDialog(srcW, srcH, dstW, dstH) {
+    return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:9999';
+        overlay.innerHTML = `
+          <div style="background:#1e1e2e;border:1px solid #555;border-radius:10px;padding:24px 28px;max-width:360px;color:#eee;font-family:inherit">
+            <div style="margin-bottom:12px;font-size:.95rem">
+              插入的 GIF 尺寸（${srcW}×${srcH}）與當前（${dstW}×${dstH}）不同，請選擇處理方式：
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <button data-v="stretch" style="padding:8px;border-radius:6px;border:1px solid #666;background:#2a2a3e;color:#eee;cursor:pointer">縮放至當前尺寸（拉伸填滿）</button>
+              <button data-v="fit"     style="padding:8px;border-radius:6px;border:1px solid #666;background:#2a2a3e;color:#eee;cursor:pointer">等比縮放＋補透明</button>
+              <button data-v="crop"    style="padding:8px;border-radius:6px;border:1px solid #666;background:#2a2a3e;color:#eee;cursor:pointer">等比縮放＋置中裁切</button>
+              <button data-v="cancel"  style="padding:8px;border-radius:6px;border:1px solid #444;background:#111;color:#aaa;cursor:pointer">取消</button>
+            </div>
+          </div>`;
+        overlay.querySelectorAll('button').forEach(btn => {
+            btn.onclick = () => {
+                document.body.removeChild(overlay);
+                resolve(btn.dataset.v === 'cancel' ? null : btn.dataset.v);
+            };
+        });
+        document.body.appendChild(overlay);
+    });
 }
 
 // ── Helpers ────────────────────────────────────────
