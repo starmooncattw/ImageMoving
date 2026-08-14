@@ -1861,6 +1861,19 @@ function canvasPoint(e) {
 let dragMode = null; // 'move' | 'scale' | 'rotate'
 let dragStart = null;
 
+// 滑鼠滾輪：對目前選取的圖層做放大縮小（往上滾放大、往下滾縮小）
+previewCanvas.addEventListener('wheel', e => {
+    const selected = layers.find(l => l.id === selectedLayerId);
+    if (!selected || selected.type === 'filter') return;
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.1 : (1 / 1.1);
+    selected.scale = Math.max(0.05, Math.min(10, selected.scale * factor));
+
+    document.getElementById('propScale').value = selected.scale.toFixed(2);
+    document.getElementById('propScaleVal').textContent = Math.round(selected.scale * 100) + '%';
+    renderPreview();
+}, { passive: false });
+
 previewCanvas.addEventListener('mousedown', e => {
     const p = canvasPoint(e);
     const selected = layers.find(l => l.id === selectedLayerId);
