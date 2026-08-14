@@ -114,6 +114,7 @@ header h1{font-size:1.2rem;font-weight:700;background:linear-gradient(135deg,#a7
         <button class="btn small" onclick="fileInput.click()">+ 圖片</button>
         <button class="btn small" onclick="addTextLayer()">+ 文字</button>
         <button class="btn small" onclick="addFilterLayer()">+ 濾鏡</button>
+        <button class="btn small" onclick="addParticleLayer()">+ 粒子</button>
       </div>
       <div style="padding:0 8px 8px"><button class="btn small primary" style="width:100%" onclick="applyMemeTemplate()">😂 梗圖範本（上下大白字）</button></div>
       <div id="layerList"></div>
@@ -228,6 +229,28 @@ header h1{font-size:1.2rem;font-weight:700;background:linear-gradient(135deg,#a7
             <label>飽和度</label>
             <input type="range" id="propSaturate" min="0" max="200" step="1" value="100" oninput="updateSelectedLayer()">
             <span class="val-label" id="propSaturateVal">100%</span>
+          </div>
+        </div>
+
+        <div class="ctrl-group" id="particlePropsGroup" style="display:none">
+          <h3>粒子效果（全畫布）</h3>
+          <div class="ctrl-row">
+            <label>類型</label>
+            <select id="propParticleType" onchange="updateSelectedLayer(true)" style="flex:1">
+              <option value="snow">❄ 下雪</option>
+              <option value="heart">❤ 愛心</option>
+              <option value="star">⭐ 星星</option>
+              <option value="bubble">🫧 泡泡</option>
+              <option value="sakura">🌸 櫻花</option>
+              <option value="sparkle">✨ 閃光</option>
+              <option value="firefly">🌟 螢火蟲</option>
+              <option value="confetti">🎊 彩紙</option>
+            </select>
+          </div>
+          <div class="ctrl-row">
+            <label>速度</label>
+            <input type="range" id="propParticleSpeed" min="0" max="0.5" step="0.01" value="0.1" oninput="updateSelectedLayer()">
+            <span class="val-label" id="propParticleSpeedVal">0.1</span>
           </div>
         </div>
 
@@ -1121,6 +1144,9 @@ let isPlaying = false, playTimer = null, playLastTick = 0;
 let currentTimeMs = 0; // 播放時間軸（毫秒），取代原本簡單的幀計數
 const TICK_MS = 20; // 播放時鐘更新間隔，實際畫面依各圖層 delay 對齊，不是每個 tick 都換幀
 
+const PARTICLE_EMOJI = { snow: '❄', heart: '❤', star: '⭐', bubble: '🫧', sakura: '🌸', sparkle: '✨', firefly: '🌟', confetti: '🎊' };
+const PARTICLE_NAMES = { snow: '下雪', heart: '愛心', star: '星星', bubble: '泡泡', sakura: '櫻花', sparkle: '閃光', firefly: '螢火蟲', confetti: '彩紙' };
+
 // ── 時間軸對齊：以幀數最多的動態圖層為基準，其餘圖層依時間換算應顯示第幾幀 ──
 function computeMasterTimeline() {
     const dynamicLayers = layers.filter(l => l.frames && l.frames.length > 1);
@@ -1308,6 +1334,158 @@ function filterCssString(layer) {
          + 'hue-rotate(' + layer.hue + 'deg) saturate(' + layer.saturate + '%)';
 }
 
+// ── 粒子圖層：移植自 PhysicsGIF_Studio.html 的粒子系統，改成純時間函式 ──
+// （位置只由 currentTimeMs 算出，不會逐幀累加狀態，這樣匯出 GIF 時任意時間點重算都會得到同一個結果）
+function addParticleLayer() {
+    const layer = {
+        id: nextLayerId++, name: '粒子圖層', type: 'particle',
+        particleType: 'snow', particleSpeed: 0.1, particles: [],
+        x: 0, y: 0, scale: 1, rotation: 0, opacity: 100, blend: 'source-over',
+        keyColor: null, keyTolerance: 30, frames: null
+    };
+    initLayerParticles(layer);
+    layers.push(layer);
+    uploadArea.style.display = 'none';
+    document.getElementById('editorSection').style.display = 'flex';
+    selectLayer(layer.id);
+    renderLayerList();
+    renderPreview();
+}
+
+function initLayerParticles(layer) {
+    const type = layer.particleType;
+    const count = type === 'sparkle' ? 30 : (type === 'confetti' ? 150 : 15);
+    const useGrid = ['heart', 'star', 'sparkle'].includes(type);
+    const particles = [];
+
+    if (useGrid) {
+        const cols = Math.ceil(Math.sqrt(count * (canvasW / canvasH)));
+        const rows = Math.ceil(count / cols);
+        const cellW = canvasW / cols;
+        const cellH = canvasH / rows;
+        let idx = 0;
+        for (let row = 0; row < rows && idx < count; row++) {
+            for (let col = 0; col < cols && idx < count; col++) {
+                const offsetX = (Math.random() - 0.5) * cellW * 0.6;
+                const offsetY = (Math.random() - 0.5) * cellH * 0.6;
+                particles.push({
+                    startX: col * cellW + cellW / 2 + offsetX,
+                    startY: row * cellH + cellH / 2 + offsetY,
+                    s: Math.random() * 0.5 + 0.6, v: Math.random() * 2 + 1, o: Math.random() * Math.PI * 2,
+                    vx: (Math.random() - 0.5) * 2, rotSpeed: (Math.random() - 0.5) * 5,
+                    color: 'hsl(' + Math.random() * 360 + ', 70%, 60%)', offset: Math.random() * 1000
+                });
+                idx++;
+            }
+        }
+    } else {
+        for (let i = 0; i < count; i++) {
+            particles.push({
+                startX: Math.random() * canvasW, startY: Math.random() * canvasH,
+                s: Math.random() * 0.5 + 0.5, v: Math.random() * 2 + 1, o: Math.random() * Math.PI * 2,
+                vx: (Math.random() - 0.5) * 2, rotSpeed: (Math.random() - 0.5) * 5,
+                color: 'hsl(' + Math.random() * 360 + ', 70%, 60%)', offset: Math.random() * 1000
+            });
+        }
+    }
+    layer.particles = particles;
+}
+
+function drawParticleLayer(ctx, layer, timeMs) {
+    const type = layer.particleType;
+    const cycleHeight = canvasH + 60;
+    const cycleWidth = canvasW + 60;
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(100, layer.opacity)) / 100;
+    ctx.globalCompositeOperation = layer.blend || 'source-over';
+
+    layer.particles.forEach(p => {
+        const t = (timeMs * layer.particleSpeed) + p.offset;
+        let x, y, rot = 0;
+
+        if (type === 'bubble') {
+            const movement = (t * p.v * 0.5) % cycleHeight;
+            y = (p.startY - movement + cycleHeight) % cycleHeight - 30;
+            x = p.startX + Math.sin(t * 0.05 + p.o) * 30;
+            x = ((x % cycleWidth) + cycleWidth) % cycleWidth - 30;
+        } else if (type === 'sakura') {
+            const movement = (t * p.v * 0.8) % cycleHeight;
+            y = (p.startY + movement) % cycleHeight - 30;
+            x = p.startX + Math.sin(t * 0.03 + p.o) * 50;
+            x = ((x % cycleWidth) + cycleWidth) % cycleWidth - 30;
+            rot = t * p.rotSpeed;
+        } else if (type === 'firefly') {
+            y = canvasH / 2 + Math.sin(t * 0.05 + p.o) * (canvasH * 0.4);
+            x = canvasW / 2 + Math.cos(t * 0.05 + p.o) * (canvasW * 0.4);
+        } else if (type === 'confetti') {
+            const movement = (t * p.v) % cycleHeight;
+            y = (p.startY + movement) % cycleHeight - 30;
+            const xMovement = (t * p.vx) % cycleWidth;
+            x = (p.startX + xMovement + cycleWidth) % cycleWidth - 30;
+            rot = t * p.rotSpeed;
+        } else if (type === 'heart' || type === 'star' || type === 'sparkle') {
+            x = p.startX; y = p.startY;
+        } else {
+            const movement = (t * p.v) % cycleHeight;
+            y = (p.startY + movement) % cycleHeight - 30;
+            x = p.startX;
+        }
+
+        ctx.save();
+        ctx.translate(x, y);
+        if (type === 'sakura' || type === 'confetti') ctx.rotate(rot * Math.PI / 180);
+
+        if (type === 'heart' || type === 'star' || type === 'sparkle') {
+            const pulseScale = p.s * (0.8 + Math.abs(Math.sin(t * 0.1 + p.o)) * 0.5);
+            ctx.scale(pulseScale, pulseScale);
+        } else {
+            ctx.scale(p.s, p.s);
+        }
+
+        if (type === 'snow') {
+            ctx.fillStyle = 'rgba(255,255,255,0.8)';
+            ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI * 2); ctx.fill();
+        } else if (type === 'heart') {
+            ctx.fillStyle = 'rgba(255, 50, 50, 0.9)';
+            ctx.font = '30px Arial'; ctx.textAlign = 'center';
+            ctx.fillText('❤', 0, 0);
+        } else if (type === 'star') {
+            ctx.fillStyle = 'rgba(255, 255, 100, ' + Math.abs(Math.sin(timeMs * 0.1 + p.o)) + ')';
+            ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
+        } else if (type === 'bubble') {
+            ctx.strokeStyle = 'rgba(100, 200, 255, 0.6)'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.stroke();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'; ctx.fill();
+        } else if (type === 'sakura') {
+            ctx.fillStyle = 'rgba(255, 182, 193, 0.8)';
+            ctx.font = '25px Arial'; ctx.textAlign = 'center';
+            ctx.fillText('🌸', 0, 0);
+        } else if (type === 'sparkle') {
+            const alpha = Math.abs(Math.sin(timeMs * 0.15 + p.o));
+            ctx.beginPath();
+            ctx.moveTo(0, -6); ctx.lineTo(0, 6); ctx.moveTo(-6, 0); ctx.lineTo(6, 0);
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = 'rgba(255, 255, 255, ' + alpha + ')';
+            ctx.stroke();
+        } else if (type === 'firefly') {
+            const alpha = Math.abs(Math.sin(timeMs * 0.2 + p.o));
+            ctx.fillStyle = 'rgba(255, 255, 100, ' + alpha + ')';
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = 'rgba(255, 255, 100, ' + alpha + ')';
+            ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
+        } else if (type === 'confetti') {
+            ctx.fillStyle = p.color;
+            ctx.fillRect(-4, -8, 8, 16);
+        }
+
+        ctx.restore();
+    });
+
+    ctx.restore();
+}
+
 // 梗圖範本：畫布上方＋下方各放一個「大白字＋黑邊」文字圖層，套用經典排版
 function applyMemeTemplate() {
     const fontSize = Math.max(20, Math.round(canvasH * 0.11));
@@ -1434,6 +1612,13 @@ function renderLayerList() {
             fctx.fillStyle = '#fff'; fctx.font = '18px sans-serif';
             fctx.textAlign = 'center'; fctx.textBaseline = 'middle';
             fctx.fillText('🎛', THUMB / 2, THUMB / 2);
+        } else if (layer.type === 'particle') {
+            th.width = THUMB; th.height = THUMB;
+            const pctx = th.getContext('2d');
+            pctx.fillStyle = '#0d1520'; pctx.fillRect(0, 0, THUMB, THUMB);
+            pctx.font = '20px sans-serif';
+            pctx.textAlign = 'center'; pctx.textBaseline = 'middle';
+            pctx.fillText(PARTICLE_EMOJI[layer.particleType] || '✨', THUMB / 2, THUMB / 2);
         } else {
             const ratio = layer.srcH / layer.srcW;
             th.width = THUMB; th.height = Math.round(THUMB * ratio) || THUMB;
@@ -1444,7 +1629,7 @@ function renderLayerList() {
         info.className = 'layer-info';
         const nameEl = document.createElement('div');
         nameEl.className = 'layer-name';
-        const icon = layer.type === 'gif' ? '🎞 ' : layer.type === 'text' ? '🅰 ' : layer.type === 'filter' ? '🎛 ' : '🖼 ';
+        const icon = layer.type === 'gif' ? '🎞 ' : layer.type === 'text' ? '🅰 ' : layer.type === 'filter' ? '🎛 ' : layer.type === 'particle' ? (PARTICLE_EMOJI[layer.particleType] || '✨') + ' ' : '🖼 ';
         nameEl.textContent = icon + layer.name;
         const metaEl = document.createElement('div');
         metaEl.className = 'layer-meta';
@@ -1452,6 +1637,8 @@ function renderLayerList() {
             ? layer.frames.length + ' 幀 · ' + layer.srcW + '×' + layer.srcH
             : layer.type === 'filter'
             ? '影響下方圖層'
+            : layer.type === 'particle'
+            ? PARTICLE_NAMES[layer.particleType] + ' · 全畫布'
             : layer.srcW + '×' + layer.srcH;
         info.appendChild(nameEl); info.appendChild(metaEl);
 
@@ -1548,10 +1735,12 @@ function selectLayer(id) {
 
     const isText = layer.type === 'text';
     const isFilter = layer.type === 'filter';
+    const isParticle = layer.type === 'particle';
     document.getElementById('textPropsGroup').style.display = isText ? 'block' : 'none';
     document.getElementById('filterPropsGroup').style.display = isFilter ? 'block' : 'none';
-    document.getElementById('keyColorGroup').style.display = (isText || isFilter) ? 'none' : 'block';
-    document.getElementById('transformPropsGroup').style.display = isFilter ? 'none' : 'block';
+    document.getElementById('particlePropsGroup').style.display = isParticle ? 'block' : 'none';
+    document.getElementById('keyColorGroup').style.display = (isText || isFilter || isParticle) ? 'none' : 'block';
+    document.getElementById('transformPropsGroup').style.display = (isFilter || isParticle) ? 'none' : 'block';
     document.getElementById('blendPropsGroup').style.display = isFilter ? 'none' : 'block';
     if (isText) {
         document.getElementById('propText').value = layer.text;
@@ -1577,9 +1766,14 @@ function selectLayer(id) {
         document.getElementById('propSaturate').value = layer.saturate;
         document.getElementById('propSaturateVal').textContent = layer.saturate + '%';
     }
+    if (isParticle) {
+        document.getElementById('propParticleType').value = layer.particleType;
+        document.getElementById('propParticleSpeed').value = layer.particleSpeed;
+        document.getElementById('propParticleSpeedVal').textContent = layer.particleSpeed;
+    }
 }
 
-function updateSelectedLayer() {
+function updateSelectedLayer(regenParticles) {
     const layer = layers.find(l => l.id === selectedLayerId);
     if (!layer) return;
 
@@ -1592,6 +1786,20 @@ function updateSelectedLayer() {
         document.getElementById('propContrastVal').textContent = layer.contrast + '%';
         document.getElementById('propHueVal').textContent = layer.hue + '°';
         document.getElementById('propSaturateVal').textContent = layer.saturate + '%';
+        renderLayerList();
+        renderPreview();
+        return;
+    }
+
+    if (layer.type === 'particle') {
+        const newType = document.getElementById('propParticleType').value;
+        if (regenParticles || newType !== layer.particleType) {
+            layer.particleType = newType;
+            initLayerParticles(layer);
+        }
+        layer.particleSpeed = parseFloat(document.getElementById('propParticleSpeed').value) || 0;
+        document.getElementById('propParticleSpeedVal').textContent = layer.particleSpeed;
+        layer.blend = document.getElementById('propBlend').value;
         renderLayerList();
         renderPreview();
         return;
@@ -1717,6 +1925,7 @@ function deleteSelectedLayer() {
 function resizeCanvasSetting() {
     canvasW = parseInt(document.getElementById('canvasW').value) || canvasW;
     canvasH = parseInt(document.getElementById('canvasH').value) || canvasH;
+    layers.filter(l => l.type === 'particle').forEach(initLayerParticles); // 畫布大小變了，粒子分布範圍要跟著重算
     renderPreview();
 }
 
@@ -1799,6 +2008,11 @@ function renderPreview(skipOverlay) {
             continue;
         }
 
+        if (layer.type === 'particle') {
+            drawParticleLayer(previewCtx, layer, currentTimeMs);
+            continue;
+        }
+
         const frameIdx = layerFrameIndexAtTime(layer, currentTimeMs);
         const img = getKeyedFrameCanvas(layer, frameIdx);
         const { w, h, cx, cy } = layerGeom(layer);
@@ -1814,7 +2028,7 @@ function renderPreview(skipOverlay) {
 
     // 選取圖層的外框與控制點（移動用整個框、右下角縮放、上方旋轉）
     const selected = skipOverlay ? null : layers.find(l => l.id === selectedLayerId);
-    if (selected && selected.type !== 'filter') {
+    if (selected && selected.type !== 'filter' && selected.type !== 'particle') {
         const { w, h, cx, cy } = layerGeom(selected);
         previewCtx.save();
         previewCtx.globalAlpha = 1;
@@ -1864,7 +2078,7 @@ let dragStart = null;
 // 滑鼠滾輪：對目前選取的圖層做放大縮小（往上滾放大、往下滾縮小）
 previewCanvas.addEventListener('wheel', e => {
     const selected = layers.find(l => l.id === selectedLayerId);
-    if (!selected || selected.type === 'filter') return;
+    if (!selected || selected.type === 'filter' || selected.type === 'particle') return;
     e.preventDefault();
     const factor = e.deltaY < 0 ? 1.1 : (1 / 1.1);
     selected.scale = Math.max(0.05, Math.min(10, selected.scale * factor));
