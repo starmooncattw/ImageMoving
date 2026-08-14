@@ -1192,6 +1192,9 @@ async function handleFiles(fileList) {
         selectLayer(layers[layers.length - 1].id);
         renderLayerList();
         renderPreview();
+
+        // 有動態圖層（GIF）時自動開始播放預覽，使用者不用手動按播放才看得到動畫
+        if (!isPlaying && computeMasterTimeline()) togglePlay();
     }
 }
 
