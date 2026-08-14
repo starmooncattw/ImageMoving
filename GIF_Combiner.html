@@ -245,6 +245,7 @@ header h1{font-size:1.2rem;font-weight:700;background:linear-gradient(135deg,#a7
               <option value="sparkle">✨ 閃光</option>
               <option value="firefly">🌟 螢火蟲</option>
               <option value="confetti">🎊 彩紙</option>
+              <option value="leaf">🍂 秋葉</option>
             </select>
           </div>
           <div class="ctrl-row">
@@ -1144,8 +1145,8 @@ let isPlaying = false, playTimer = null, playLastTick = 0;
 let currentTimeMs = 0; // 播放時間軸（毫秒），取代原本簡單的幀計數
 const TICK_MS = 20; // 播放時鐘更新間隔，實際畫面依各圖層 delay 對齊，不是每個 tick 都換幀
 
-const PARTICLE_EMOJI = { snow: '❄', heart: '❤', star: '⭐', bubble: '🫧', sakura: '🌸', sparkle: '✨', firefly: '🌟', confetti: '🎊' };
-const PARTICLE_NAMES = { snow: '下雪', heart: '愛心', star: '星星', bubble: '泡泡', sakura: '櫻花', sparkle: '閃光', firefly: '螢火蟲', confetti: '彩紙' };
+const PARTICLE_EMOJI = { snow: '❄', heart: '❤', star: '⭐', bubble: '🫧', sakura: '🌸', sparkle: '✨', firefly: '🌟', confetti: '🎊', leaf: '🍂' };
+const PARTICLE_NAMES = { snow: '下雪', heart: '愛心', star: '星星', bubble: '泡泡', sakura: '櫻花', sparkle: '閃光', firefly: '螢火蟲', confetti: '彩紙', leaf: '秋葉' };
 
 // ── 時間軸對齊：以幀數最多的動態圖層為基準，其餘圖層依時間換算應顯示第幾幀 ──
 function computeMasterTimeline() {
@@ -1379,12 +1380,14 @@ function initLayerParticles(layer) {
             }
         }
     } else {
+        const leafEmojis = ['🍂', '🍁', '🍃'];
         for (let i = 0; i < count; i++) {
             particles.push({
                 startX: Math.random() * canvasW, startY: Math.random() * canvasH,
                 s: Math.random() * 0.5 + 0.5, v: Math.random() * 2 + 1, o: Math.random() * Math.PI * 2,
                 vx: (Math.random() - 0.5) * 2, rotSpeed: (Math.random() - 0.5) * 5,
-                color: 'hsl(' + Math.random() * 360 + ', 70%, 60%)', offset: Math.random() * 1000
+                color: 'hsl(' + Math.random() * 360 + ', 70%, 60%)', offset: Math.random() * 1000,
+                leafEmoji: leafEmojis[Math.floor(Math.random() * leafEmojis.length)]
             });
         }
     }
@@ -1409,7 +1412,7 @@ function drawParticleLayer(ctx, layer, timeMs) {
             y = (p.startY - movement + cycleHeight) % cycleHeight - 30;
             x = p.startX + Math.sin(t * 0.05 + p.o) * 30;
             x = ((x % cycleWidth) + cycleWidth) % cycleWidth - 30;
-        } else if (type === 'sakura') {
+        } else if (type === 'sakura' || type === 'leaf') {
             const movement = (t * p.v * 0.8) % cycleHeight;
             y = (p.startY + movement) % cycleHeight - 30;
             x = p.startX + Math.sin(t * 0.03 + p.o) * 50;
@@ -1434,7 +1437,7 @@ function drawParticleLayer(ctx, layer, timeMs) {
 
         ctx.save();
         ctx.translate(x, y);
-        if (type === 'sakura' || type === 'confetti') ctx.rotate(rot * Math.PI / 180);
+        if (type === 'sakura' || type === 'confetti' || type === 'leaf') ctx.rotate(rot * Math.PI / 180);
 
         if (type === 'heart' || type === 'star' || type === 'sparkle') {
             const pulseScale = p.s * (0.8 + Math.abs(Math.sin(t * 0.1 + p.o)) * 0.5);
@@ -1461,6 +1464,9 @@ function drawParticleLayer(ctx, layer, timeMs) {
             ctx.fillStyle = 'rgba(255, 182, 193, 0.8)';
             ctx.font = '25px Arial'; ctx.textAlign = 'center';
             ctx.fillText('🌸', 0, 0);
+        } else if (type === 'leaf') {
+            ctx.font = '24px Arial'; ctx.textAlign = 'center';
+            ctx.fillText(p.leafEmoji || '🍂', 0, 0);
         } else if (type === 'sparkle') {
             const alpha = Math.abs(Math.sin(timeMs * 0.15 + p.o));
             ctx.beginPath();
