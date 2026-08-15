@@ -478,12 +478,15 @@
                                 <option value="snow">❄️ 下雪</option>
                                 <option value="rain">🌧️ 下雨</option>
                                 <option value="heart">❤️ 愛心</option>
-                                <option value="sakura">🌸 櫻花</option>
-                                <option value="firefly">✨ 螢火蟲</option>
-                                <option value="bubble">🫧 泡泡</option>
                                 <option value="star">⭐ 星星</option>
+                                <option value="bubble">🫧 泡泡</option>
+                                <option value="sakura">🌸 櫻花</option>
                                 <option value="sparkle">✨ 閃光</option>
+                                <option value="firefly">✨ 螢火蟲</option>
                                 <option value="confetti">🎊 彩紙</option>
+                                <option value="leaf1">🍂 落葉</option>
+                                <option value="leaf2">🍁 楓葉</option>
+                                <option value="leaf3">🍃 風葉</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -581,6 +584,8 @@
         // 粒子系統變數
         let particles = [];
         let particleAnimationId = null;
+        const LEAF_TYPES = ['leaf1', 'leaf2', 'leaf3'];
+        const LEAF_EMOJI = { leaf1: '🍂', leaf2: '🍁', leaf3: '🍃' };
         const particleCanvas = document.getElementById('particleCanvas');
         const particleCtx = particleCanvas.getContext('2d');
 
@@ -2373,6 +2378,8 @@ if (config.effects.particle.enabled) {
     const speed = config.effects.particle.speed;
     const count = type === 'sparkle' ? 30 : (type === 'confetti' ? 150 : (type === 'rain' ? 100 : 15));
     const useGrid = ['heart', 'star', 'sparkle'].includes(type);
+    const leafTypes = ['leaf1', 'leaf2', 'leaf3'];
+    const leafEmoji = { leaf1: '🍂', leaf2: '🍁', leaf3: '🍃' };
     
     // 初始化粒子
     if (useGrid) {
@@ -2433,7 +2440,7 @@ if (config.effects.particle.enabled) {
                 y = (p.startY - movement + cycleHeight) % cycleHeight - 30;
                 x = p.startX + Math.sin(t * 0.05 + p.o) * 30;
                 x = ((x % cycleWidth) + cycleWidth) % cycleWidth - 30;
-            } else if (type === 'sakura') {
+            } else if (type === 'sakura' || leafTypes.indexOf(type) !== -1) {
                 const movement = (t * p.v * 0.8) % cycleHeight;
                 y = (p.startY + movement) % cycleHeight - 30;
                 x = p.startX + Math.sin(t * 0.03 + p.o) * 50;
@@ -2464,10 +2471,10 @@ if (config.effects.particle.enabled) {
             
             ctx.save();
             ctx.translate(x, y);
-            if (type === 'sakura' || type === 'confetti') {
+            if (type === 'sakura' || type === 'confetti' || leafTypes.indexOf(type) !== -1) {
                 ctx.rotate(rot * Math.PI / 180);
             }
-            
+
             // 縮放
             if (['heart', 'star', 'sparkle'].indexOf(type) !== -1) {
                 const pulseScale = p.s * (0.8 + Math.abs(Math.sin(t * 0.1 + p.o)) * 0.5);
@@ -2512,6 +2519,10 @@ if (config.effects.particle.enabled) {
                 ctx.font = "25px Arial";
                 ctx.textAlign = "center";
                 ctx.fillText("🌸", 0, 0);
+            } else if (leafTypes.indexOf(type) !== -1) {
+                ctx.font = "24px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText(leafEmoji[type], 0, 0);
             } else if (type === 'sparkle') {
                 const alpha = Math.abs(Math.sin(currentTime*0.15+p.o));
                 ctx.fillStyle = 'rgba(255, 255, 255, ' + alpha + ')';
@@ -3126,7 +3137,7 @@ function drawParticles(currentTime) {
             y = (p.startY - movement + cycleHeight) % cycleHeight - 30;
             x = p.startX + Math.sin(t * 0.05 + p.o) * 30;
             x = ((x % cycleWidth) + cycleWidth) % cycleWidth - 30;
-        } else if (type === 'sakura') {
+        } else if (type === 'sakura' || LEAF_TYPES.includes(type)) {
             const movement = (t * p.v * 0.8) % cycleHeight;
             y = (p.startY + movement) % cycleHeight - 30;
             x = p.startX + Math.sin(t * 0.03 + p.o) * 50;
@@ -3159,7 +3170,7 @@ function drawParticles(currentTime) {
 
         particleCtx.save();
         particleCtx.translate(x, y);
-        if (type === 'sakura' || type === 'confetti') {
+        if (type === 'sakura' || type === 'confetti' || LEAF_TYPES.includes(type)) {
             particleCtx.rotate(rot * Math.PI / 180);
         }
 
@@ -3207,6 +3218,10 @@ function drawParticles(currentTime) {
             particleCtx.font = "25px Arial";
             particleCtx.textAlign = "center";
             particleCtx.fillText("🌸", 0, 0);
+        } else if (LEAF_TYPES.includes(type)) {
+            particleCtx.font = "24px Arial";
+            particleCtx.textAlign = "center";
+            particleCtx.fillText(LEAF_EMOJI[type], 0, 0);
         } else if (type === 'sparkle') {
             const alpha = Math.abs(Math.sin(currentTime*0.15+p.o));
             particleCtx.fillStyle = `rgba(255, 255, 255, ${alpha})`;

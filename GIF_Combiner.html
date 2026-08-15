@@ -238,6 +238,7 @@ header h1{font-size:1.2rem;font-weight:700;background:linear-gradient(135deg,#a7
             <label>類型</label>
             <select id="propParticleType" onchange="updateSelectedLayer(true)" style="flex:1">
               <option value="snow">❄ 下雪</option>
+              <option value="rain">🌧 下雨</option>
               <option value="heart">❤ 愛心</option>
               <option value="star">⭐ 星星</option>
               <option value="bubble">🫧 泡泡</option>
@@ -1147,8 +1148,8 @@ let isPlaying = false, playTimer = null, playLastTick = 0;
 let currentTimeMs = 0; // 播放時間軸（毫秒），取代原本簡單的幀計數
 const TICK_MS = 20; // 播放時鐘更新間隔，實際畫面依各圖層 delay 對齊，不是每個 tick 都換幀
 
-const PARTICLE_EMOJI = { snow: '❄', heart: '❤', star: '⭐', bubble: '🫧', sakura: '🌸', sparkle: '✨', firefly: '🌟', confetti: '🎊', leaf1: '🍂', leaf2: '🍁', leaf3: '🍃' };
-const PARTICLE_NAMES = { snow: '下雪', heart: '愛心', star: '星星', bubble: '泡泡', sakura: '櫻花', sparkle: '閃光', firefly: '螢火蟲', confetti: '彩紙', leaf1: '落葉', leaf2: '楓葉', leaf3: '風葉' };
+const PARTICLE_EMOJI = { snow: '❄', rain: '🌧', heart: '❤', star: '⭐', bubble: '🫧', sakura: '🌸', sparkle: '✨', firefly: '🌟', confetti: '🎊', leaf1: '🍂', leaf2: '🍁', leaf3: '🍃' };
+const PARTICLE_NAMES = { snow: '下雪', rain: '下雨', heart: '愛心', star: '星星', bubble: '泡泡', sakura: '櫻花', sparkle: '閃光', firefly: '螢火蟲', confetti: '彩紙', leaf1: '落葉', leaf2: '楓葉', leaf3: '風葉' };
 const LEAF_TYPES = ['leaf1', 'leaf2', 'leaf3'];
 
 // ── 時間軸對齊：以幀數最多的動態圖層為基準，其餘圖層依時間換算應顯示第幾幀 ──
@@ -1430,6 +1431,11 @@ function drawParticleLayer(ctx, layer, timeMs) {
             rot = t * p.rotSpeed;
         } else if (type === 'heart' || type === 'star' || type === 'sparkle') {
             x = p.startX; y = p.startY;
+        } else if (type === 'rain') {
+            const movement = (t * p.v * 3) % cycleHeight;
+            y = (p.startY + movement) % cycleHeight - 30;
+            x = p.startX + movement * 0.3;
+            x = ((x % cycleWidth) + cycleWidth) % cycleWidth - 30;
         } else {
             const movement = (t * p.v) % cycleHeight;
             y = (p.startY + movement) % cycleHeight - 30;
@@ -1450,6 +1456,9 @@ function drawParticleLayer(ctx, layer, timeMs) {
         if (type === 'snow') {
             ctx.fillStyle = 'rgba(255,255,255,0.8)';
             ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI * 2); ctx.fill();
+        } else if (type === 'rain') {
+            ctx.strokeStyle = 'rgba(100, 150, 255, 0.6)'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(3, 10); ctx.stroke();
         } else if (type === 'heart') {
             ctx.fillStyle = 'rgba(255, 50, 50, 0.9)';
             ctx.font = '30px Arial'; ctx.textAlign = 'center';

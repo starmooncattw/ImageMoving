@@ -180,6 +180,7 @@
             <select id="particle" onchange="updateParam('particle', this.value)">
                 <option value="none">無 (None)</option>
                 <option value="snow">下雪 (Snow)</option>
+                <option value="rain">下雨 (Rain)</option>
                 <option value="heart">愛心 (Heart)</option>
                 <option value="star">星星 (Star)</option>
                 <option value="bubble">泡泡 (Bubble)</option>
@@ -187,6 +188,9 @@
                 <option value="sparkle">閃光 (Sparkle)</option>
                 <option value="firefly">螢火蟲 (Firefly)</option>
                 <option value="confetti">彩紙 (Confetti)</option>
+                <option value="leaf1">落葉 (Leaf)</option>
+                <option value="leaf2">楓葉 (Maple)</option>
+                <option value="leaf3">風葉 (Wind Leaf)</option>
             </select>
         </div>
         <div class="control-item">
@@ -306,6 +310,8 @@
     };
     let params = { ...defaultParams };
     let particles = [];
+    const LEAF_TYPES = ['leaf1', 'leaf2', 'leaf3'];
+    const LEAF_EMOJI = { leaf1: '🍂', leaf2: '🍁', leaf3: '🍃' };
 
     // 拖曳狀態
     let isDragging = false;
@@ -873,13 +879,19 @@
                 y = (p.startY - movement + cycleHeight) % cycleHeight - 30;
                 x = p.startX + Math.sin(t * 0.05 + p.o) * 30;
                 x = ((x % cycleWidth) + cycleWidth) % cycleWidth - 30;
-            } else if (params.particle === 'sakura') {
+            } else if (params.particle === 'sakura' || LEAF_TYPES.includes(params.particle)) {
                 // 向下飄落 + 左右擺動
                 const movement = (t * p.v * 0.8) % cycleHeight;
                 y = (p.startY + movement) % cycleHeight - 30;
                 x = p.startX + Math.sin(t * 0.03 + p.o) * 50;
                 x = ((x % cycleWidth) + cycleWidth) % cycleWidth - 30;
                 rot = t * p.rotSpeed;
+            } else if (params.particle === 'rain') {
+                // 雨滴：快速斜向下落
+                const movement = (t * p.v * 3) % cycleHeight;
+                y = (p.startY + movement) % cycleHeight - 30;
+                x = p.startX + movement * 0.3;
+                x = ((x % cycleWidth) + cycleWidth) % cycleWidth - 30;
             } else if (params.particle === 'firefly') {
                 // 圓周運動，完美循環
                 y = canvas.height / 2 + Math.sin(t * 0.05 + p.o) * (canvas.height * 0.4);
@@ -904,7 +916,7 @@
 
             ctx.save();
             ctx.translate(x, y);
-            if (params.particle === 'sakura' || params.particle === 'confetti') {
+            if (params.particle === 'sakura' || params.particle === 'confetti' || LEAF_TYPES.includes(params.particle)) {
                 ctx.rotate(rot * Math.PI / 180);
             }
 
@@ -922,6 +934,17 @@
                 ctx.beginPath();
                 ctx.arc(0, 0, 5, 0, Math.PI*2);
                 ctx.fill();
+            } else if (params.particle === 'rain') {
+                ctx.strokeStyle = 'rgba(100, 150, 255, 0.6)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, -10);
+                ctx.lineTo(3, 10);
+                ctx.stroke();
+            } else if (LEAF_TYPES.includes(params.particle)) {
+                ctx.font = "24px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText(LEAF_EMOJI[params.particle], 0, 0);
             } else if (params.particle === 'heart') {
                 ctx.fillStyle = `rgba(255, 50, 50, 0.9)`;
                 ctx.font = "30px Arial";
@@ -1047,8 +1070,9 @@
 
             // 加入固定粒子顏色
             const _fixedPColors = {
-                snow: [0xFFFFFF], heart: [0xFF3232], star: [0xFFFF64],
-                bubble: [0x64C8FF], sakura: [0xFFB6C1], sparkle: [0xFFFFFF], firefly: [0xFFFF64]
+                snow: [0xFFFFFF], rain: [0x6496FF], heart: [0xFF3232], star: [0xFFFF64],
+                bubble: [0x64C8FF], sakura: [0xFFB6C1], sparkle: [0xFFFFFF], firefly: [0xFFFF64],
+                leaf1: [0xC97B3D], leaf2: [0xE0522D], leaf3: [0x8BC34A]
             };
             (_fixedPColors[params.particle] || []).forEach(c => _used.add(c));
 
