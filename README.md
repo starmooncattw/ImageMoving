@@ -319,7 +319,7 @@ A: 圖片會以 Base64 嵌入，建議壓縮至 < 1MB
 
 ### GIF Editor
 - 技術：純 HTML/JavaScript
-- 解碼：gifuct-js 拆幀
+- 解碼：omggif 拆幀
 - 編碼：gif.js 重新輸出
 - 操作：完全離線，本機運作
 
