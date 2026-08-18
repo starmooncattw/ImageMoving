@@ -2365,7 +2365,10 @@
         // 取得粒子系統腳本
         function getParticleScript(config) {
             if (!config.effects.particle || !config.effects.particle.enabled) return '';
-            
+
+            // 安全內嵌：避免資料中若出現反引號/${ 會提前截斷這段模板字串
+            const safeJson = v => JSON.stringify(v).replace(/`/g, '\\`').replace(/\$\{/g, '\\${');
+
             return `
 if (config.effects.particle.enabled) {
     const canvas = document.getElementById('particleCanvas');
@@ -2378,8 +2381,8 @@ if (config.effects.particle.enabled) {
     const speed = config.effects.particle.speed;
     const count = type === 'sparkle' ? 30 : (type === 'confetti' ? 150 : (type === 'rain' ? 100 : 15));
     const useGrid = ['heart', 'star', 'sparkle'].includes(type);
-    const leafTypes = ${JSON.stringify(LEAF_TYPES)};
-    const leafEmoji = ${JSON.stringify(LEAF_EMOJI)};
+    const leafTypes = ${safeJson(LEAF_TYPES)};
+    const leafEmoji = ${safeJson(LEAF_EMOJI)};
     const isLeaf = leafTypes.indexOf(type) !== -1;
     const isGridType = ['heart', 'star', 'sparkle'].indexOf(type) !== -1;
     
