@@ -2378,8 +2378,10 @@ if (config.effects.particle.enabled) {
     const speed = config.effects.particle.speed;
     const count = type === 'sparkle' ? 30 : (type === 'confetti' ? 150 : (type === 'rain' ? 100 : 15));
     const useGrid = ['heart', 'star', 'sparkle'].includes(type);
-    const leafTypes = ['leaf1', 'leaf2', 'leaf3'];
-    const leafEmoji = { leaf1: '🍂', leaf2: '🍁', leaf3: '🍃' };
+    const leafTypes = ${JSON.stringify(LEAF_TYPES)};
+    const leafEmoji = ${JSON.stringify(LEAF_EMOJI)};
+    const isLeaf = leafTypes.indexOf(type) !== -1;
+    const isGridType = ['heart', 'star', 'sparkle'].indexOf(type) !== -1;
     
     // 初始化粒子
     if (useGrid) {
@@ -2440,7 +2442,7 @@ if (config.effects.particle.enabled) {
                 y = (p.startY - movement + cycleHeight) % cycleHeight - 30;
                 x = p.startX + Math.sin(t * 0.05 + p.o) * 30;
                 x = ((x % cycleWidth) + cycleWidth) % cycleWidth - 30;
-            } else if (type === 'sakura' || leafTypes.indexOf(type) !== -1) {
+            } else if (type === 'sakura' || isLeaf) {
                 const movement = (t * p.v * 0.8) % cycleHeight;
                 y = (p.startY + movement) % cycleHeight - 30;
                 x = p.startX + Math.sin(t * 0.03 + p.o) * 50;
@@ -2455,7 +2457,7 @@ if (config.effects.particle.enabled) {
                 const xMovement = (t * p.vx) % cycleWidth;
                 x = (p.startX + xMovement + cycleWidth) % cycleWidth - 30;
                 rot = t * p.rotSpeed;
-            } else if (['heart', 'star', 'sparkle'].indexOf(type) !== -1) {
+            } else if (isGridType) {
                 x = p.startX;
                 y = p.startY;
             } else if (type === 'rain') {
@@ -2471,12 +2473,12 @@ if (config.effects.particle.enabled) {
             
             ctx.save();
             ctx.translate(x, y);
-            if (type === 'sakura' || type === 'confetti' || leafTypes.indexOf(type) !== -1) {
+            if (type === 'sakura' || type === 'confetti' || isLeaf) {
                 ctx.rotate(rot * Math.PI / 180);
             }
 
             // 縮放
-            if (['heart', 'star', 'sparkle'].indexOf(type) !== -1) {
+            if (isGridType) {
                 const pulseScale = p.s * (0.8 + Math.abs(Math.sin(t * 0.1 + p.o)) * 0.5);
                 ctx.scale(pulseScale, pulseScale);
             } else {
@@ -2519,7 +2521,7 @@ if (config.effects.particle.enabled) {
                 ctx.font = "25px Arial";
                 ctx.textAlign = "center";
                 ctx.fillText("🌸", 0, 0);
-            } else if (leafTypes.indexOf(type) !== -1) {
+            } else if (isLeaf) {
                 ctx.font = "24px Arial";
                 ctx.textAlign = "center";
                 ctx.fillText(leafEmoji[type], 0, 0);
@@ -3068,7 +3070,7 @@ function resizeParticleCanvas() {
 function initParticles() {
     particles = [];
     const type = document.getElementById('particleType').value;
-    const count = type === 'sparkle' ? 30 : (type === 'confetti' ? 150 : 15);
+    const count = type === 'sparkle' ? 30 : (type === 'confetti' ? 150 : (type === 'rain' ? 100 : 15));
     const useGrid = ['heart', 'star', 'sparkle'].includes(type);
 
     if (useGrid) {
@@ -3120,6 +3122,8 @@ function initParticles() {
 function drawParticles(currentTime) {
     const type = document.getElementById('particleType').value;
     const speed = parseFloat(document.getElementById('particleSpeed').value);
+    const isLeaf = LEAF_TYPES.includes(type);
+    const isGridType = ['heart', 'star', 'sparkle'].includes(type);
 
     particleCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
     particleCtx.save();
@@ -3137,7 +3141,7 @@ function drawParticles(currentTime) {
             y = (p.startY - movement + cycleHeight) % cycleHeight - 30;
             x = p.startX + Math.sin(t * 0.05 + p.o) * 30;
             x = ((x % cycleWidth) + cycleWidth) % cycleWidth - 30;
-        } else if (type === 'sakura' || LEAF_TYPES.includes(type)) {
+        } else if (type === 'sakura' || isLeaf) {
             const movement = (t * p.v * 0.8) % cycleHeight;
             y = (p.startY + movement) % cycleHeight - 30;
             x = p.startX + Math.sin(t * 0.03 + p.o) * 50;
@@ -3152,7 +3156,7 @@ function drawParticles(currentTime) {
             const xMovement = (t * p.vx) % cycleWidth;
             x = (p.startX + xMovement + cycleWidth) % cycleWidth - 30;
             rot = t * p.rotSpeed;
-        } else if (['heart', 'star', 'sparkle'].includes(type)) {
+        } else if (isGridType) {
             x = p.startX;
             y = p.startY;
         } else if (type === 'rain') {
@@ -3170,12 +3174,12 @@ function drawParticles(currentTime) {
 
         particleCtx.save();
         particleCtx.translate(x, y);
-        if (type === 'sakura' || type === 'confetti' || LEAF_TYPES.includes(type)) {
+        if (type === 'sakura' || type === 'confetti' || isLeaf) {
             particleCtx.rotate(rot * Math.PI / 180);
         }
 
         // 縮放
-        if (['heart', 'star', 'sparkle'].includes(type)) {
+        if (isGridType) {
             const pulseScale = p.s * (0.8 + Math.abs(Math.sin(t * 0.1 + p.o)) * 0.5);
             particleCtx.scale(pulseScale, pulseScale);
         } else {
@@ -3218,7 +3222,7 @@ function drawParticles(currentTime) {
             particleCtx.font = "25px Arial";
             particleCtx.textAlign = "center";
             particleCtx.fillText("🌸", 0, 0);
-        } else if (LEAF_TYPES.includes(type)) {
+        } else if (isLeaf) {
             particleCtx.font = "24px Arial";
             particleCtx.textAlign = "center";
             particleCtx.fillText(LEAF_EMOJI[type], 0, 0);

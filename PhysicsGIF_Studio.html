@@ -810,7 +810,7 @@
     function initParticles() {
         particles = [];
         if (params.particle === 'none') return;
-        const count = params.particle === 'sparkle' ? 30 : (params.particle === 'confetti' ? 150 : 15);
+        const count = params.particle === 'sparkle' ? 30 : (params.particle === 'confetti' ? 150 : (params.particle === 'rain' ? 100 : 15));
 
         // 固定位置的粒子（愛心、星星、閃光）使用網格分布
         const useGrid = ['heart', 'star', 'sparkle'].includes(params.particle);
@@ -862,6 +862,8 @@
     }
     function drawParticles(currentTime) {
         if (params.particle === 'none') return;
+        const isLeaf = LEAF_TYPES.includes(params.particle);
+        const isGridType = params.particle === 'heart' || params.particle === 'star' || params.particle === 'sparkle';
         ctx.save();
         particles.forEach(p => {
             // 基於時間計算位置（不累積修改）
@@ -879,7 +881,7 @@
                 y = (p.startY - movement + cycleHeight) % cycleHeight - 30;
                 x = p.startX + Math.sin(t * 0.05 + p.o) * 30;
                 x = ((x % cycleWidth) + cycleWidth) % cycleWidth - 30;
-            } else if (params.particle === 'sakura' || LEAF_TYPES.includes(params.particle)) {
+            } else if (params.particle === 'sakura' || isLeaf) {
                 // 向下飄落 + 左右擺動
                 const movement = (t * p.v * 0.8) % cycleHeight;
                 y = (p.startY + movement) % cycleHeight - 30;
@@ -903,7 +905,7 @@
                 const xMovement = (t * p.vx) % cycleWidth;
                 x = (p.startX + xMovement + cycleWidth) % cycleWidth - 30;
                 rot = t * p.rotSpeed;
-            } else if (params.particle === 'heart' || params.particle === 'star' || params.particle === 'sparkle') {
+            } else if (isGridType) {
                 // 愛心、星星、閃光 - 固定位置，放大縮小動畫
                 x = p.startX;
                 y = p.startY;
@@ -916,12 +918,12 @@
 
             ctx.save();
             ctx.translate(x, y);
-            if (params.particle === 'sakura' || params.particle === 'confetti' || LEAF_TYPES.includes(params.particle)) {
+            if (params.particle === 'sakura' || params.particle === 'confetti' || isLeaf) {
                 ctx.rotate(rot * Math.PI / 180);
             }
 
             // 愛心、星星、閃光使用放大縮小動畫
-            if (params.particle === 'heart' || params.particle === 'star' || params.particle === 'sparkle') {
+            if (isGridType) {
                 const pulseScale = p.s * (0.8 + Math.abs(Math.sin(t * 0.1 + p.o)) * 0.5);
                 ctx.scale(pulseScale, pulseScale);
             } else {
@@ -941,7 +943,7 @@
                 ctx.moveTo(0, -10);
                 ctx.lineTo(3, 10);
                 ctx.stroke();
-            } else if (LEAF_TYPES.includes(params.particle)) {
+            } else if (isLeaf) {
                 ctx.font = "24px Arial";
                 ctx.textAlign = "center";
                 ctx.fillText(LEAF_EMOJI[params.particle], 0, 0);
