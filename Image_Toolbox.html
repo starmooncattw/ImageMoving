@@ -1138,21 +1138,43 @@ function resetCropAndRender() {
     requestAnimationFrame(() => syncCropBoxToDisplay());
 }
 
+// 旋轉時把目前的裁切框換算到新的畫布方向，而不是整個重置
+function rotateCropRect(clockwise) {
+    const oldW = curW, oldH = curH;
+    if (clockwise) {
+        const newX = oldH - cropY - cropH, newY = cropX;
+        cropX = newX; cropY = newY;
+    } else {
+        const newX = cropY, newY = oldW - cropX - cropW;
+        cropX = newX; cropY = newY;
+    }
+    const tmp = cropW; cropW = cropH; cropH = tmp;
+}
+
+function keepCropAndRerender() {
+    renderEditCanvas();
+    clampCrop();
+    syncCropInputs();
+    requestAnimationFrame(() => syncCropBoxToDisplay());
+}
+
 document.getElementById('btnRotateLeft').addEventListener('click', () => {
+    rotateCropRect(false);
     rotation = (rotation + 270) % 360;
-    resetCropAndRender();
+    keepCropAndRerender();
 });
 document.getElementById('btnRotateRight').addEventListener('click', () => {
+    rotateCropRect(true);
     rotation = (rotation + 90) % 360;
-    resetCropAndRender();
+    keepCropAndRerender();
 });
 document.getElementById('btnFlipH').addEventListener('click', () => {
     flipH = !flipH;
-    resetCropAndRender();
+    keepCropAndRerender();
 });
 document.getElementById('btnFlipV').addEventListener('click', () => {
     flipV = !flipV;
-    resetCropAndRender();
+    keepCropAndRerender();
 });
 document.getElementById('btnReset').addEventListener('click', () => {
     rotation = 0; flipH = false; flipV = false;
