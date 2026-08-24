@@ -114,10 +114,10 @@ header h1{font-size:1.2rem;font-weight:700;background:linear-gradient(135deg,#a7
 
 <!-- Upload -->
 <div id="uploadArea">
-  <h2>📂 上傳 GIF 檔案</h2>
-  <p>拖曳 GIF 到此處，或點擊選擇檔案</p>
-  <label class="btn-upload" for="fileInput">選擇 GIF</label>
-  <input type="file" id="fileInput" accept="image/gif">
+  <h2>📂 上傳 GIF 檔案，或選擇多張圖片拼成 GIF</h2>
+  <p>拖曳 GIF 或多張圖片到此處，或點擊選擇檔案</p>
+  <label class="btn-upload" for="fileInput">選擇 GIF / 圖片</label>
+  <input type="file" id="fileInput" accept="image/gif,image/png,image/jpeg,image/webp" multiple>
 </div>
 
 <!-- Editor -->
@@ -1074,10 +1074,62 @@ uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag
 uploadArea.addEventListener('drop', e => {
     e.preventDefault();
     uploadArea.classList.remove('dragover');
-    const f = e.dataTransfer.files[0];
-    if (f && f.type === 'image/gif') loadGIF(f);
+    handleUploadFiles(e.dataTransfer.files);
 });
-fileInput.addEventListener('change', e => { if (e.target.files[0]) loadGIF(e.target.files[0]); });
+fileInput.addEventListener('change', e => { handleUploadFiles(e.target.files); e.target.value = ''; });
+
+function handleUploadFiles(fileList) {
+    const files = Array.from(fileList).filter(f =>
+        ['image/gif', 'image/png', 'image/jpeg', 'image/webp'].includes(f.type));
+    if (!files.length) return;
+
+    if (files.length === 1 && files[0].type === 'image/gif') {
+        loadGIF(files[0]);
+        return;
+    }
+
+    const images = files.filter(f => f.type !== 'image/gif');
+    if (images.length) loadImagesAsFrames(images);
+    else alert('多張檔案上傳時請選擇圖片（PNG/JPEG/WEBP），不支援多個 GIF 一起上傳。');
+}
+
+// ── Load static images as frames ────────────────────
+async function loadImagesAsFrames(files) {
+    stopPlay();
+    const sorted = [...files].sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+    try {
+        const newFrames = await Promise.all(sorted.map(file => new Promise((resolve, reject) => {
+            const url = URL.createObjectURL(file);
+            const img = new Image();
+            img.onload = () => {
+                const c = document.createElement('canvas');
+                c.width = img.width; c.height = img.height;
+                c.getContext('2d').drawImage(img, 0, 0);
+                URL.revokeObjectURL(url);
+                resolve({ canvas: c, delay: 500 });
+            };
+            img.onerror = () => { URL.revokeObjectURL(url); reject(new Error(file.name)); };
+            img.src = url;
+        })));
+
+        frames = newFrames;
+        gifWidth  = Math.max(...frames.map(f => f.canvas.width));
+        gifHeight = Math.max(...frames.map(f => f.canvas.height));
+
+        document.getElementById('outWidth').value  = gifWidth;
+        document.getElementById('outHeight').value = gifHeight;
+        selectedIndex = 0;
+        cmdHistory.length = 0;
+        updateUndoBtns();
+        uploadArea.style.display = 'none';
+        document.getElementById('editorSection').style.display = 'flex';
+        renderFrameStrip();
+        renderPreview();
+    } catch (err) {
+        alert('圖片載入失敗：' + err.message);
+    }
+}
 
 document.getElementById('frameStrip').addEventListener('wheel', e => {
     if (e.deltaY === 0) return;
