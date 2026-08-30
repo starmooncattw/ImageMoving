@@ -132,6 +132,7 @@ header h1{font-size:1.2rem;font-weight:700;background:linear-gradient(135deg,#a7
     <button class="btn small" onclick="duplicateFrame()">複製幀</button>
     <button class="btn small danger" onclick="deleteFrame()">刪除幀</button>
     <button class="btn small" onclick="reverseFrames()">⇄ 反轉順序</button>
+    <button class="btn small danger" onclick="halveFrames()">✂ 減半幀數</button>
     <button class="btn small" onclick="fmInsertGIF()">↑ 串接 GIF</button>
     <button class="btn small primary" onclick="openFrameManager()" style="margin-left:8px">🗂 幀管理器</button>
   </div>
@@ -1439,6 +1440,39 @@ function moveFrame(dir) {
 function reverseFrames() {
     const exec = () => { frames.reverse(); selectedIndex = 0; renderFrameStrip(); renderPreview(); };
     pushCmd({ exec, undo: exec });
+    exec();
+}
+
+// ── 減半幀數（刪除偶數編號幀） ─────────────────────────
+function halveFrames() {
+    if (frames.length < 2) { alert('目前幀數太少，無法執行減半。'); return; }
+
+    const removeCount = Math.floor(frames.length / 2);
+    const keepCount = frames.length - removeCount;
+    const ok = confirm(
+        '這個功能會刪除偶數編號的幀（例如共 1~10 幀時，會刪除第 2、4、6、8、10 幀，只保留第 1、3、5、7、9 幀），藉此把幀數減半。\n\n' +
+        '目前共 ' + frames.length + ' 幀，執行後會刪除 ' + removeCount + ' 幀，保留 ' + keepCount + ' 幀。\n' +
+        '注意：因為幀數變少但每幀延遲不變，動畫播放速度會變快。\n\n' +
+        '確定要執行嗎？此動作可以按「復原」還原。'
+    );
+    if (!ok) return;
+
+    const oldFrames = frames.slice();
+    const oldSelected = selectedIndex;
+    // 0-based 偶數索引 = 1-based 奇數編號（1,3,5...），保留下來
+    const newFrames = frames.filter((_, i) => i % 2 === 0);
+
+    const exec = () => {
+        frames = newFrames;
+        selectedIndex = Math.min(oldSelected, frames.length - 1);
+        renderFrameStrip(); renderPreview();
+    };
+    const undo = () => {
+        frames = oldFrames;
+        selectedIndex = oldSelected;
+        renderFrameStrip(); renderPreview();
+    };
+    pushCmd({ exec, undo });
     exec();
 }
 
