@@ -237,10 +237,10 @@ header h1{font-size:1.2rem;font-weight:700;background:linear-gradient(135deg,#a7
           <span class="val-label" id="chromaToleranceVal">30</span>
         </div>
         <div class="btn-row">
-          <button class="btn" onclick="applyChromaKey(false)">套用本幀</button>
-          <button class="btn" onclick="applyChromaKey(true)">套用全部</button>
+          <button class="btn" id="chromaApplyOneBtn" onclick="applyChromaKey(false)">套用本幀</button>
+          <button class="btn" id="chromaApplyAllBtn" onclick="applyChromaKey(true)">套用全部</button>
         </div>
-        <p style="font-size:0.72rem;color:#555;margin-top:6px">先按吸色按鈕，再點畫面上要去除的顏色</p>
+        <p style="font-size:0.72rem;color:#555;margin-top:6px" id="chromaStatus">先按吸色按鈕，再點畫面上要去除的顏色</p>
       </div>
 
       <!-- 匯出 -->
@@ -1493,44 +1493,58 @@ function applyChromaKey(toAll) {
     if (!pickedChromaColor) { alert('請先按「吸取顏色」再點選畫面上要去除的顏色'); return; }
     if (!frames.length || selectedIndex < 0) return;
 
-    const tol = parseInt(document.getElementById('chromaTolerance').value) || 0;
-    const threshold = (tol / 100) * 441.7; // 最大可能的 RGB 距離 ≈ 441.7
-    const targets = toAll ? frames.map((_, i) => i) : [selectedIndex];
-    const { r, g, b } = pickedChromaColor;
+    const btn1 = document.getElementById('chromaApplyOneBtn');
+    const btn2 = document.getElementById('chromaApplyAllBtn');
+    const status = document.getElementById('chromaStatus');
+    btn1.disabled = true;
+    btn2.disabled = true;
+    status.textContent = toAll ? '⏳ 處理中...（套用全部幀，請稍候）' : '⏳ 處理中...';
 
-    const snapshots = targets.map(i => {
-        const src = frames[i].canvas;
-        const nc = document.createElement('canvas');
-        nc.width = src.width; nc.height = src.height;
-        nc.getContext('2d').drawImage(src, 0, 0);
-        return nc;
-    });
+    // 用 setTimeout 讓畫面先把「處理中」文字畫出來，再開始跑耗時的像素運算
+    setTimeout(() => {
+        const tol = parseInt(document.getElementById('chromaTolerance').value) || 0;
+        const threshold = (tol / 100) * 441.7; // 最大可能的 RGB 距離 ≈ 441.7
+        const targets = toAll ? frames.map((_, i) => i) : [selectedIndex];
+        const { r, g, b } = pickedChromaColor;
 
-    const exec = () => {
-        targets.forEach(i => {
-            const c = frames[i].canvas;
-            const ctx = c.getContext('2d');
-            const id = ctx.getImageData(0, 0, c.width, c.height);
-            const d = id.data;
-            for (let p = 0; p < d.length; p += 4) {
-                const dr = d[p] - r, dg = d[p + 1] - g, db = d[p + 2] - b;
-                if (Math.sqrt(dr * dr + dg * dg + db * db) <= threshold) d[p + 3] = 0;
-            }
-            ctx.putImageData(id, 0, 0);
+        const snapshots = targets.map(i => {
+            const src = frames[i].canvas;
+            const nc = document.createElement('canvas');
+            nc.width = src.width; nc.height = src.height;
+            nc.getContext('2d').drawImage(src, 0, 0);
+            return nc;
         });
-        renderFrameStrip(); renderPreview();
-    };
-    const undo = () => {
-        targets.forEach((i, j) => {
-            const c = frames[i].canvas;
-            const ctx = c.getContext('2d');
-            ctx.clearRect(0, 0, c.width, c.height);
-            ctx.drawImage(snapshots[j], 0, 0);
-        });
-        renderFrameStrip(); renderPreview();
-    };
-    pushCmd({ exec, undo });
-    exec();
+
+        const exec = () => {
+            targets.forEach(i => {
+                const c = frames[i].canvas;
+                const ctx = c.getContext('2d');
+                const id = ctx.getImageData(0, 0, c.width, c.height);
+                const d = id.data;
+                for (let p = 0; p < d.length; p += 4) {
+                    const dr = d[p] - r, dg = d[p + 1] - g, db = d[p + 2] - b;
+                    if (Math.sqrt(dr * dr + dg * dg + db * db) <= threshold) d[p + 3] = 0;
+                }
+                ctx.putImageData(id, 0, 0);
+            });
+            renderFrameStrip(); renderPreview();
+        };
+        const undo = () => {
+            targets.forEach((i, j) => {
+                const c = frames[i].canvas;
+                const ctx = c.getContext('2d');
+                ctx.clearRect(0, 0, c.width, c.height);
+                ctx.drawImage(snapshots[j], 0, 0);
+            });
+            renderFrameStrip(); renderPreview();
+        };
+        pushCmd({ exec, undo });
+        exec();
+
+        btn1.disabled = false;
+        btn2.disabled = false;
+        status.textContent = '✅ 已完成（套用 ' + targets.length + ' 幀）';
+    }, 30);
 }
 
 // ── Output size ────────────────────────────────────
