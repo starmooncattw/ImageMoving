@@ -177,7 +177,7 @@ header h1{font-size:1.2rem;font-weight:700;background:linear-gradient(135deg,#a7
   <div class="editor-main">
     <!-- Preview -->
     <div class="preview-section">
-      <div class="preview-wrap"><canvas id="previewCanvas"></canvas></div>
+      <div class="preview-wrap"><canvas id="previewCanvas" onclick="handlePreviewClick(event)"></canvas></div>
       <div class="play-bar">
         <button class="btn" id="btnPlay" onclick="togglePlay()">▶ 播放</button>
         <button class="btn small" onclick="stepFrame(-1)">◀</button>
@@ -222,6 +222,25 @@ header h1{font-size:1.2rem;font-weight:700;background:linear-gradient(135deg,#a7
         <div class="btn-row">
           <button class="btn small" onclick="resetOutputSize()">重設</button>
         </div>
+      </div>
+
+      <!-- 去背 -->
+      <div class="ctrl-group">
+        <h3>去背（去除顏色）</h3>
+        <div class="ctrl-row">
+          <span id="chromaSwatch" style="width:28px;height:28px;border-radius:6px;border:1px solid #444;background:repeating-conic-gradient(#333 0% 25%, #222 0% 50%) 0/10px 10px;flex-shrink:0"></span>
+          <button class="btn small" id="chromaPickBtn" onclick="startColorPick()">🎯 從畫面吸取顏色</button>
+        </div>
+        <div class="ctrl-row">
+          <label>容許度</label>
+          <input type="range" id="chromaTolerance" min="0" max="100" value="30" oninput="updateLabel('chromaTolerance','chromaToleranceVal')">
+          <span class="val-label" id="chromaToleranceVal">30</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn" onclick="applyChromaKey(false)">套用本幀</button>
+          <button class="btn" onclick="applyChromaKey(true)">套用全部</button>
+        </div>
+        <p style="font-size:0.72rem;color:#555;margin-top:6px">先按吸色按鈕，再點畫面上要去除的顏色</p>
       </div>
 
       <!-- 匯出 -->
@@ -1441,6 +1460,76 @@ function shiftAllDelay() {
         renderFrameStrip(); renderPreview();
     };
     pushCmd({ exec, undo() { frames.forEach((f, i) => f.delay = oldDelays[i]); renderFrameStrip(); renderPreview(); } });
+    exec();
+}
+
+// ── 去背（吸色去除） ─────────────────────────────────
+let pickedChromaColor = null;
+let isPickingChroma = false;
+
+function startColorPick() {
+    if (!frames.length) return;
+    isPickingChroma = true;
+    document.getElementById('previewCanvas').style.cursor = 'crosshair';
+    document.getElementById('chromaPickBtn').textContent = '👉 請點擊畫面上的顏色...';
+}
+
+function handlePreviewClick(e) {
+    if (!isPickingChroma) return;
+    const c = document.getElementById('previewCanvas');
+    const rect = c.getBoundingClientRect();
+    const x = Math.min(c.width - 1, Math.max(0, Math.floor((e.clientX - rect.left) * (c.width / rect.width))));
+    const y = Math.min(c.height - 1, Math.max(0, Math.floor((e.clientY - rect.top) * (c.height / rect.height))));
+    const px = c.getContext('2d').getImageData(x, y, 1, 1).data;
+    pickedChromaColor = { r: px[0], g: px[1], b: px[2] };
+
+    isPickingChroma = false;
+    c.style.cursor = '';
+    document.getElementById('chromaPickBtn').textContent = '🎯 從畫面吸取顏色';
+    document.getElementById('chromaSwatch').style.background = `rgb(${px[0]},${px[1]},${px[2]})`;
+}
+
+function applyChromaKey(toAll) {
+    if (!pickedChromaColor) { alert('請先按「吸取顏色」再點選畫面上要去除的顏色'); return; }
+    if (!frames.length || selectedIndex < 0) return;
+
+    const tol = parseInt(document.getElementById('chromaTolerance').value) || 0;
+    const threshold = (tol / 100) * 441.7; // 最大可能的 RGB 距離 ≈ 441.7
+    const targets = toAll ? frames.map((_, i) => i) : [selectedIndex];
+    const { r, g, b } = pickedChromaColor;
+
+    const snapshots = targets.map(i => {
+        const src = frames[i].canvas;
+        const nc = document.createElement('canvas');
+        nc.width = src.width; nc.height = src.height;
+        nc.getContext('2d').drawImage(src, 0, 0);
+        return nc;
+    });
+
+    const exec = () => {
+        targets.forEach(i => {
+            const c = frames[i].canvas;
+            const ctx = c.getContext('2d');
+            const id = ctx.getImageData(0, 0, c.width, c.height);
+            const d = id.data;
+            for (let p = 0; p < d.length; p += 4) {
+                const dr = d[p] - r, dg = d[p + 1] - g, db = d[p + 2] - b;
+                if (Math.sqrt(dr * dr + dg * dg + db * db) <= threshold) d[p + 3] = 0;
+            }
+            ctx.putImageData(id, 0, 0);
+        });
+        renderFrameStrip(); renderPreview();
+    };
+    const undo = () => {
+        targets.forEach((i, j) => {
+            const c = frames[i].canvas;
+            const ctx = c.getContext('2d');
+            ctx.clearRect(0, 0, c.width, c.height);
+            ctx.drawImage(snapshots[j], 0, 0);
+        });
+        renderFrameStrip(); renderPreview();
+    };
+    pushCmd({ exec, undo });
     exec();
 }
 
