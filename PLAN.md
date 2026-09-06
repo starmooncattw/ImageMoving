@@ -158,3 +158,14 @@
 - 純靜態 HTML，所有處理在瀏覽器本機完成，圖片不上傳伺服器
 - 托管於 GitHub Pages：`https://starmooncattw.github.io/ImageMoving/`
 - `index.html` 作為工具集入口頁
+
+---
+
+## 更新紀錄
+
+- **2026-09-06：SEO 基礎建設與創作者工具箱導流升級**
+  - 新增 `robots.txt` 與 `sitemap.xml`（收錄首頁與 5 款工具頁面）
+  - 首頁 `index.html` 補齊完整 SEO Meta Tags（Canonical、Description、Keywords、Open Graph 社交預覽卡片、Twitter Cards 與 Schema.org `WebApplication` 結構化資料）
+  - 全站右下角升級為「🧪 創作者工具箱」互動彈窗（整合 Discord 專屬直達邀請碼 `https://discord.gg/weddpRK8N8`、綠界贊助、以及連往姊妹專案 `StreamSchedule` 與 `ThumbLayerStudio` 之互通導流）
+  - 同步更新 `宣傳用內容/promo_text.txt` 文案庫之 Discord 交流區連結與委託說明（加註於群內留言勿直接私訊）
+
