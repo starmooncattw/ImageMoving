@@ -1773,10 +1773,10 @@
         img.style.opacity = config.opacity / 100;
 
         // 翻轉
-        let flipTransform = '';
-        if (config.flip === 'horizontal') flipTransform = 'scaleX(-1)';
-        else if (config.flip === 'vertical') flipTransform = 'scaleY(-1)';
-        else if (config.flip === 'both') flipTransform = 'scaleX(-1) scaleY(-1)';
+        // 使用個別屬性 translate/scale 做定位與翻轉，避免特效動畫的 transform 把它蓋掉
+        const flipSX = (config.flip === 'horizontal' || config.flip === 'both') ? -1 : 1;
+        const flipSY = (config.flip === 'vertical' || config.flip === 'both') ? -1 : 1;
+        img.style.scale = flipSX + ' ' + flipSY;
 
         // 動態生成 CSS 動畫
         const styleSheet = document.createElement('style');
@@ -1794,12 +1794,12 @@
 
         const horizontalTop = {
             top: hPos === 'top' ? '0%' : (hPos === 'middle' ? '50%' : (hPos === 'random' ? (Math.random() * 80 + 10) + '%' : '100%')),
-            transform: hPos === 'top' ? 'translateY(0%)' : (hPos === 'middle' ? 'translateY(-50%)' : (hPos === 'random' ? 'translateY(-50%)' : 'translateY(-100%)'))
+            translate: hPos === 'top' ? '0 0' : (hPos === 'middle' ? '0 -50%' : (hPos === 'random' ? '0 -50%' : '0 -100%'))
         };
 
         const verticalLeft = {
             left: vPos === 'left' ? '0%' : (vPos === 'center' ? '50%' : (vPos === 'random' ? (Math.random() * 80 + 10) + '%' : '100%')),
-            transform: vPos === 'left' ? 'translateX(0%)' : (vPos === 'center' ? 'translateX(-50%)' : (vPos === 'random' ? 'translateX(-50%)' : 'translateX(-100%)'))
+            translate: vPos === 'left' ? '0 0' : (vPos === 'center' ? '-50% 0' : (vPos === 'random' ? '-50% 0' : '-100% 0'))
         };
 
         let movementKeyframes = '';
@@ -1809,7 +1809,7 @@
             case 'static':
                 img.style.left = '50%';
                 img.style.top = '50%';
-                img.style.transform = 'translate(-50%, -50%) ' + flipTransform;
+                img.style.translate = '-50% -50%';
                 break;
 
             case 'randomAppear':
@@ -1858,7 +1858,7 @@
                 }`;
                 animations.push(`${animationName} ${duration} linear infinite`);
                 img.style.top = horizontalTop.top;
-                img.style.transform = horizontalTop.transform + ' ' + flipTransform;
+                img.style.translate = horizontalTop.translate;
                 break;
 
             case 'rightToLeft':
@@ -1868,13 +1868,12 @@
                 }`;
                 animations.push(`${animationName} ${duration} linear infinite`);
                 img.style.top = horizontalTop.top;
-                img.style.transform = horizontalTop.transform + ' ' + flipTransform;
+                img.style.translate = horizontalTop.translate;
                 break;
 
             case 'horizontalLoop':
                 const loopStart = movement.horizontalLoopStart || 'left';
                 const loopPosMode = movement.horizontalLoopPosition || 'middle';
-                const flipY = config.flip === 'vertical' || config.flip === 'both' ? 'scaleY(-1)' : '';
 
                 let startPos = loopStart === 'left' ? -20 : 140;
                 let endPos = loopStart === 'left' ? 140 : -20;
@@ -1888,9 +1887,9 @@
 
                 function getRandomTransform(flip) {
                     if (loopPosMode === 'random') {
-                        return 'translateY(-50%)';
+                        return '0 -50%';
                     }
-                    return loopPosMode === 'top' ? 'translateY(0%)' : (loopPosMode === 'middle' ? 'translateY(-50%)' : 'translateY(-100%)');
+                    return loopPosMode === 'top' ? '0 0' : (loopPosMode === 'middle' ? '0 -50%' : '0 -100%');
                 }
 
                 img.style.top = getRandomTop();
@@ -1907,7 +1906,8 @@
                         img.style.transition = 'none';
                         img.style.left = startPos + '%';
                         img.style.top = currentTop;
-                        img.style.transform = `${currentTransform} scaleX(${currentFlip}) ${flipY}`;
+                        img.style.translate = currentTransform;
+                        img.style.scale = (currentFlip * flipSX) + ' ' + flipSY;
 
                         requestAnimationFrame(() => {
                             requestAnimationFrame(() => {
@@ -1917,7 +1917,8 @@
                                 setTimeout(() => {
                                     currentFlip = -1;
                                     img.style.transition = 'none';
-                                    img.style.transform = `${currentTransform} scaleX(${currentFlip}) ${flipY}`;
+                                    img.style.translate = currentTransform;
+                        img.style.scale = (currentFlip * flipSX) + ' ' + flipSY;
                                     setTimeout(moveBackward, 50);
                                 }, totalDuration);
                             });
@@ -1931,7 +1932,8 @@
                         img.style.transition = 'none';
                         img.style.left = endPos + '%';
                         img.style.top = currentTop;
-                        img.style.transform = `${currentTransform} scaleX(${currentFlip}) ${flipY}`;
+                        img.style.translate = currentTransform;
+                        img.style.scale = (currentFlip * flipSX) + ' ' + flipSY;
 
                         requestAnimationFrame(() => {
                             requestAnimationFrame(() => {
@@ -1941,7 +1943,8 @@
                                 setTimeout(() => {
                                     currentFlip = 1;
                                     img.style.transition = 'none';
-                                    img.style.transform = `${currentTransform} scaleX(${currentFlip}) ${flipY}`;
+                                    img.style.translate = currentTransform;
+                        img.style.scale = (currentFlip * flipSX) + ' ' + flipSY;
                                     setTimeout(moveForward, 50);
                                 }, totalDuration);
                             });
@@ -1961,7 +1964,7 @@
                 }`;
                 animations.push(`${animationName} ${duration} linear infinite`);
                 img.style.left = verticalLeft.left;
-                img.style.transform = verticalLeft.transform + ' ' + flipTransform;
+                img.style.translate = verticalLeft.translate;
                 break;
 
             case 'bottomToTop':
@@ -1971,13 +1974,12 @@
                 }`;
                 animations.push(`${animationName} ${duration} linear infinite`);
                 img.style.left = verticalLeft.left;
-                img.style.transform = verticalLeft.transform + ' ' + flipTransform;
+                img.style.translate = verticalLeft.translate;
                 break;
 
             case 'verticalLoop':
                 const vLoopStart = movement.verticalLoopStart || 'top';
                 const vLoopPosMode = movement.verticalLoopPosition || 'center';
-                const flipX = config.flip === 'horizontal' || config.flip === 'both' ? 'scaleX(-1)' : '';
 
                 let vStartPos = vLoopStart === 'top' ? -20 : 140;
                 let vEndPos = vLoopStart === 'top' ? 140 : -20;
@@ -1991,9 +1993,9 @@
 
                 function getRandomVTransform() {
                     if (vLoopPosMode === 'random') {
-                        return 'translateX(-50%)';
+                        return '-50% 0';
                     }
-                    return vLoopPosMode === 'left' ? 'translateX(0%)' : (vLoopPosMode === 'center' ? 'translateX(-50%)' : 'translateX(-100%)');
+                    return vLoopPosMode === 'left' ? '0 0' : (vLoopPosMode === 'center' ? '-50% 0' : '-100% 0');
                 }
 
                 img.style.left = getRandomLeft();
@@ -2010,7 +2012,8 @@
                         img.style.transition = 'none';
                         img.style.top = vStartPos + '%';
                         img.style.left = currentLeft;
-                        img.style.transform = `${currentTransform} scaleY(${currentFlipV}) ${flipX}`;
+                        img.style.translate = currentTransform;
+                        img.style.scale = flipSX + ' ' + (currentFlipV * flipSY);
 
                         requestAnimationFrame(() => {
                             requestAnimationFrame(() => {
@@ -2020,7 +2023,8 @@
                                 setTimeout(() => {
                                     currentFlipV = -1;
                                     img.style.transition = 'none';
-                                    img.style.transform = `${currentTransform} scaleY(${currentFlipV}) ${flipX}`;
+                                    img.style.translate = currentTransform;
+                        img.style.scale = flipSX + ' ' + (currentFlipV * flipSY);
                                     setTimeout(moveUp, 50);
                                 }, totalDuration);
                             });
@@ -2034,7 +2038,8 @@
                         img.style.transition = 'none';
                         img.style.top = vEndPos + '%';
                         img.style.left = currentLeft;
-                        img.style.transform = `${currentTransform} scaleY(${currentFlipV}) ${flipX}`;
+                        img.style.translate = currentTransform;
+                        img.style.scale = flipSX + ' ' + (currentFlipV * flipSY);
 
                         requestAnimationFrame(() => {
                             requestAnimationFrame(() => {
@@ -2044,7 +2049,8 @@
                                 setTimeout(() => {
                                     currentFlipV = 1;
                                     img.style.transition = 'none';
-                                    img.style.transform = `${currentTransform} scaleY(${currentFlipV}) ${flipX}`;
+                                    img.style.translate = currentTransform;
+                        img.style.scale = flipSX + ' ' + (currentFlipV * flipSY);
                                     setTimeout(moveDown, 50);
                                 }, totalDuration);
                             });
@@ -2063,7 +2069,7 @@
                     to { left: 160%; top: 160%; }
                 }`;
                 animations.push(`${animationName} ${duration} linear infinite`);
-                img.style.transform = 'translate(-50%, -50%) ' + flipTransform;
+                img.style.translate = '-50% -50%';
                 break;
 
             case 'diagonalTRBL':
@@ -2072,7 +2078,7 @@
                     to { left: -60%; top: 160%; }
                 }`;
                 animations.push(`${animationName} ${duration} linear infinite`);
-                img.style.transform = 'translate(-50%, -50%) ' + flipTransform;
+                img.style.translate = '-50% -50%';
                 break;
 
             case 'diagonalBLTR':
@@ -2081,7 +2087,7 @@
                     to { left: 160%; top: -60%; }
                 }`;
                 animations.push(`${animationName} ${duration} linear infinite`);
-                img.style.transform = 'translate(-50%, -50%) ' + flipTransform;
+                img.style.translate = '-50% -50%';
                 break;
 
             case 'diagonalBRTL':
@@ -2090,7 +2096,7 @@
                     to { left: -60%; top: -60%; }
                 }`;
                 animations.push(`${animationName} ${duration} linear infinite`);
-                img.style.transform = 'translate(-50%, -50%) ' + flipTransform;
+                img.style.translate = '-50% -50%';
                 break;
 
             case 'circle':
@@ -2100,12 +2106,13 @@
                 if (centerMode === 'fixed') {
                     // 固定中心
                     movementKeyframes = `@keyframes ${animationName} {
-                        from { transform: translate(-50%, -50%) rotate(0deg) translateX(${radius}px) rotate(0deg) ${flipTransform}; }
-                        to { transform: translate(-50%, -50%) rotate(360deg) translateX(${radius}px) rotate(-360deg) ${flipTransform}; }
+                        from { transform: rotate(0deg) translateX(${radius}px) rotate(0deg); }
+                        to { transform: rotate(360deg) translateX(${radius}px) rotate(-360deg); }
                     }`;
                     animations.push(`${animationName} ${duration} linear infinite`);
                     img.style.left = '50%';
                     img.style.top = '50%';
+                    img.style.translate = '-50% -50%';
                 } else {
                     // 隨機移動中心
                     let centerX = 50;
@@ -2126,7 +2133,7 @@
 
                             img.style.left = x + '%';
                             img.style.top = y + '%';
-                            img.style.transform = `translate(-50%, -50%) ${flipTransform}`;
+                            img.style.translate = '-50% -50%';
 
                             requestAnimationFrame(rotateStep);
                         }
