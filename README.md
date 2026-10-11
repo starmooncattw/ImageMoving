@@ -6,13 +6,13 @@
 
 | 工具 | 用途 | 輸出格式 | 適合場景 |
 |------|------|---------|---------|
-| **Animation HTML Generator** | OBS 直播動畫 | HTML 檔案 | 直播、網頁 |
-| **Physics GIF Studio** | GIF 動圖製作 | GIF 圖檔 | 社群分享 |
-| **GIF Editor** | GIF 幀編輯器 | GIF 圖檔 | 幀結構編輯 |
+| **動畫 HTML 產生器（Animation HTML Generator）** | OBS 直播動畫 | HTML 檔案 | 直播、網頁 |
+| **物理 GIF 工作室（Physics GIF Studio）** | GIF 動圖製作 | GIF 圖檔 | 社群分享 |
+| **GIF 幀編輯器（GIF Editor）** | GIF 幀編輯器 | GIF 圖檔 | 幀結構編輯 |
 
 ---
 
-## 🎬 Animation HTML Generator | 動畫HTML產生器
+## 🎬 動畫 HTML 產生器（Animation HTML Generator）
 
 為 OBS 直播設計的圖片動畫產生工具，輸出獨立 HTML 檔案，可直接在 OBS 中使用。
 
@@ -96,7 +96,7 @@ A: 圖片會以 Base64 嵌入，建議壓縮至 < 1MB
 
 ---
 
-## 🎨 Physics GIF Studio | 物理GIF工作室
+## 🎨 物理 GIF 工作室（Physics GIF Studio）
 
 專業 GIF 動圖錄製工具，內建物理引擎和粒子系統，適合製作社群分享的動態貼圖。
 
@@ -251,7 +251,7 @@ A: 圖片會以 Base64 嵌入，建議壓縮至 < 1MB
 
 ---
 
-## 🎞️ GIF Editor | GIF 幀編輯器
+## 🎞️ GIF 幀編輯器（GIF Editor）
 
 專為 GIF 幀結構操作設計，不做視覺合成，專注於幀的管理與排列。
 
@@ -308,19 +308,19 @@ A: 圖片會以 Base64 嵌入，建議壓縮至 < 1MB
 
 ## 📚 技術說明
 
-### Animation HTML Generator
+### 動畫 HTML 產生器（Animation HTML Generator）
 - 技術：純 HTML/CSS/JavaScript
 - 動畫：CSS Animation + Transform
 - 圖片：Base64 編碼嵌入
 - 離線：完全本機運作
 
-### Physics GIF Studio
+### 物理 GIF 工作室（Physics GIF Studio）
 - 技術：Canvas 2D API + GIF.js
 - 引擎：自製物理引擎
 - 錄製：逐幀繪製編碼
 - 粒子：數學函數計算
 
-### GIF Editor
+### GIF 幀編輯器（GIF Editor）
 - 技術：純 HTML/JavaScript
 - 解碼：omggif 拆幀
 - 編碼：gif.js 重新輸出

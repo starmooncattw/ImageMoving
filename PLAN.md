@@ -12,7 +12,7 @@
 
 ## 工具規劃
 
-### 1. GIF Editor（GIF 幀編輯器）— `GIF_Editor.html` ✅
+### 1. GIF 幀編輯器（GIF Editor） — `GIF_Editor.html` ✅
 
 **定位：幀結構操作，不做視覺合成**
 
@@ -35,7 +35,7 @@
 
 ---
 
-### 2. GIF Combiner（GIF 疊加合成器）— `GIF_Combiner.html` ✅
+### 2. GIF 疊加合成器（GIF Combiner） — `GIF_Combiner.html` ✅
 
 **定位：多圖層視覺疊加合成**
 
